@@ -1,0 +1,101 @@
+from dataclasses import fields
+from enum import StrEnum
+from typing import Dict
+
+from PySide6 import QtCore
+from PySide6.QtCore import Qt, QSize, QSortFilterProxyModel
+from PySide6.QtGui import QIcon
+
+from models.recipe import Recipe
+from pyside_app.gui.icons import Icons
+
+
+class RecipesModel(QtCore.QAbstractTableModel):
+    def __init__(self, data: Dict[str, Recipe]):
+        super().__init__()
+        self._data = list(data.values())
+
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
+        def get(): return RecipeTupleView.data(self._data[index.row()], index.column())
+        if role == Qt.ItemDataRole.DisplayRole and isinstance(r := get(), str):
+            return r
+        elif role == Qt.ItemDataRole.DecorationRole and isinstance(r := get(), QIcon):
+            return r
+        elif role == Qt.ItemDataRole.SizeHintRole:
+            return RecipeTupleView.column_size(index.column())
+        elif role == Qt.ItemDataRole.UserRole:
+            return RecipeTupleView.sort_key(self._data[index.row()], index.column())
+
+        return None
+
+    def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
+        if orientation != Qt.Orientation.Horizontal:
+            return None
+        if role == Qt.ItemDataRole.DisplayRole:
+            return RecipeTupleView.header(section)
+        elif role == Qt.ItemDataRole.SizeHintRole:
+            return RecipeTupleView.header_size(section)
+        return None
+
+    def rowCount(self, index=QtCore.QModelIndex()):
+        return len(self._data)
+
+    def columnCount(self, index=QtCore.QModelIndex()):
+        return RecipeTupleView.columns()
+
+    def recipe(self, index: int) -> Recipe:
+        return self._data[index]
+
+
+class RecipesProxyModel(QSortFilterProxyModel):
+    def __init__(self, filterer, parent=None):
+        super().__init__(parent)
+        self._filterer = filterer
+
+    def filterAcceptsRow(self, source_row, source_parent):
+        recipe = self.sourceModel().recipe(source_row)
+        return self._filterer(recipe)
+
+
+class RecipeTupleView:
+    COLUMNS = ["basic", "type", "regimen", "duration", "title"]
+
+    @classmethod
+    def columns(cls): return len(cls.COLUMNS)
+
+    @classmethod
+    def data(cls, recipe: Recipe, index: int):
+        value = cls._value(recipe, index)
+        if isinstance(value, str) and not isinstance(value, StrEnum):
+            return value
+        elif isinstance(value, bool):
+            return Icons.BASIC_RECIPE.image() if value else None
+        else:
+            return Icons.get_image(value)
+
+    @classmethod
+    def sort_key(cls, recipe: Recipe, index: int):
+        return cls._value(recipe, index)
+
+    @classmethod
+    def _value(cls, recipe: Recipe, index: int):
+        return getattr(recipe, cls.COLUMNS[index])
+
+    @classmethod
+    def is_title(cls, col: int): return cls.COLUMNS[col] == "title"
+
+    @classmethod
+    def header(cls, col: int): return "Name" if cls.is_title(col) else None
+
+    @classmethod
+    def column_size(cls, index): return None if cls.is_title(index) else QSize(0, 0)
+
+    @classmethod
+    def header_size(cls, index): return None if cls.is_title(index) else QSize(cls.icon_size(), cls.icon_size())
+
+    @classmethod
+    def icon_size(cls): return 32
+
+
+valid_fields = {f.name for f in fields(Recipe)}
+assert all(col in valid_fields for col in RecipeTupleView.COLUMNS)

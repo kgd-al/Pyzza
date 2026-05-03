@@ -1,0 +1,9 @@
+.buildozer/
+.idea/
+build/
+storage/
+__pycache__/
+
+.python-version
+*.rbk
+*.egg-info

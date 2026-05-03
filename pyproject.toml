@@ -1,0 +1,65 @@
+[project]
+name = "Pyzza"
+version = "0"
+authors = [{ name="Kevin Godin-Dubois", email="k.j.m.godin-dubois@vu.nl"}]
+description = "PySide/Flet-powered cookbook (of actual cooking recipes) for desktop and mobile"
+readme = "README.md"
+requires-python = ">=3.12"
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  
+  "Programming Language :: Python :: 3 :: Only",
+
+  "License :: OSI Approved :: MIT License",
+
+  "Operating System :: Unix",
+
+  "Intended Audience :: Science/Research", 
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Topic :: Scientific/Engineering :: Artificial Life",
+]
+dependencies = [
+    "flet",      # If not specified here they are not packed into the apk
+    "flet-datatable2",
+
+    "PyYAML",    # The cookbook is store that way
+
+    "zeroconf",  # For automated discovery of cookbook provider/requester
+]
+
+[project.optional-dependencies]
+android = [
+  "flet", "flet-datatable2",
+]
+dev = [
+    "flet[all]",
+    "flet-cli>=0.84.0",
+    "flet-desktop>=0.84.0",
+    "flet-web>=0.84.0",
+]
+
+
+[project.urls]
+#Homepage = "https://github.com/kgd-al/apets-ariel"
+
+[project.scripts]
+
+[build-system]
+requires = [
+  "setuptools>=65.0",
+]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+namespaces = true
+
+[tool.flet]
+desktop_flavor = "light"    # Change to "full" to use flet-audio and flet-video
+org = "studio.almann"
+product = "Pyzza"
+company = "Almann"
+copyright = "Copyright (C) 2023-2026 by Kevin Godin-Dubois, powered by Flet"
+
+[tool.flet.app]
+path = "src/pyzza/flet_app"

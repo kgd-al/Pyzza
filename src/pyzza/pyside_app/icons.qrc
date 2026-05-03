@@ -1,0 +1,21 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource>
+    <file>assets/icons/basic_recipe.png</file>
+    <file>assets/icons/book.png</file>
+    <file>assets/icons/dishtype_neutral.png</file>
+    <file>assets/icons/dishtype_salty.png</file>
+    <file>assets/icons/dishtype_sugary.png</file>
+    <file>assets/icons/duration_long.png</file>
+    <file>assets/icons/duration_medium.png</file>
+    <file>assets/icons/duration_short.png</file>
+    <file>assets/icons/duration_very_long.png</file>
+    <file>assets/icons/regimen_meat.png</file>
+    <file>assets/icons/regimen_vegan.png</file>
+    <file>assets/icons/regimen_veggy.png</file>
+    <file>assets/icons/sub-recipe.png</file>
+</qresource>
+</RCC>
+<!-- recompile with
+pyside6-rcc src/pyzza/pyside_app/icons.qrc -o src/pyzza/pyside_app/rc_icons.py
+(from the project root folder)
+ -->

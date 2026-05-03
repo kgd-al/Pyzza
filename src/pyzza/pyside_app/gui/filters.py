@@ -1,0 +1,177 @@
+import dataclasses
+import re
+from enum import StrEnum, Enum
+from types import NoneType
+from typing import Type
+
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtWidgets import QWidget, QLineEdit, QVBoxLayout, QHBoxLayout, QLabel, QRadioButton, QButtonGroup, QLayout, \
+    QCheckBox, QGridLayout, QComboBox, QSizePolicy, QListView, QListWidget
+
+from models.recipe import DishType, Regimen, Duration, Recipe
+from pyside_app.gui.icons import Icons
+from pyside_app.gui.misc import line
+
+
+class YesNoGroupBox(QWidget):
+    toggled = Signal()
+
+    def __init__(self, parent=None):
+        QWidget.__init__(self, parent)
+
+        self.yes = QRadioButton("Yes")
+        self.no = QRadioButton("No")
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self.yes)
+        layout.addWidget(self.no)
+        layout.addStretch()
+        self.setLayout(layout)
+
+        self.group = QButtonGroup(self)
+        self.group.addButton(self.yes)
+        self.group.addButton(self.no)
+
+        self.yes.pressed.connect(lambda: self.toggled.emit())
+        self.no.pressed.connect(lambda: self.toggled.emit())
+
+    def state(self): return self.yes.isChecked(), self.no.isChecked()
+
+    def set_state(self, state):
+        self.yes.setChecked(state[0])
+        self.no.setChecked(state[1])
+
+    def value(self): return self.yes.isChecked()
+
+
+class EnumComboBox(QComboBox):
+    def __init__(self, enum: Type[StrEnum], parent=None):
+        QComboBox.__init__(self, parent)
+        for e in enum:
+            self.addItem(Icons.get_image(e), e.name.capitalize())
+        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        self.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContentsOnFirstShow)
+        self.adjustSize()
+
+
+class FilterView(QWidget):
+    filter_changed = Signal()
+
+    def __init__(self, parent=None):
+        QWidget.__init__(self, parent)
+
+        self.title_filter = QLineEdit(self)
+        self.title_filter.setPlaceholderText("Filter by recipe name")
+
+        self.basic_filter = YesNoGroupBox(self)
+        self.subrecipe_filter = YesNoGroupBox(self)
+
+        self.type_filter = EnumComboBox(DishType, self)
+        self.regimen_filter = EnumComboBox(Regimen, self)
+        self.duration_filter = EnumComboBox(Duration, self)
+
+        self.ingredients_filter = QListWidget(self)
+        self.subrecipes_filter = QListWidget(self)
+        self.ingredients_filter.addItem("Not implemented. Useful?")
+        self.subrecipes_filter.addItem("Not implemented. Useful?")
+
+        recipe_fields = {f.name: f for f in dataclasses.fields(Recipe)}
+
+        self.contents = {
+            filter_widget: (
+                QCheckBox(label), filter_widget,
+                recipe_fields.get(field, None)
+            )
+            for filter_widget, label, field in [
+                (self.title_filter, "Name:", "title"),
+                (self.basic_filter, "Basic?", "basic"),
+                (self.subrecipe_filter, "Sub recipe?", None),
+                (self.type_filter, "Type", "type"),
+                (self.regimen_filter, "Regimen", "regimen"),
+                (self.duration_filter, "Duration", "duration"),
+                (self.ingredients_filter, "Ingredients", "ingredients"),
+                (self.subrecipes_filter, "Sub recipes", None),
+            ]}
+
+        filter_layout = QGridLayout()
+        filter_layout.setHorizontalSpacing(4)
+        filter_layout.setVerticalSpacing(8)
+        filter_layout.addWidget(QLabel("Set filtering criteria"), 0, 0, 1, 2)
+        filter_layout.addWidget(line(), 1, 0, 1, 2)
+        for i, (checkbox, widget, field) in enumerate(self.contents.values(), 2):
+            checkbox.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+            filter_layout.addWidget(checkbox, i, 0)
+            filter_layout.addWidget(widget, i, 1)
+
+            checkbox.toggled.connect(self.emit_filter_changed)
+            if isinstance(widget, QLineEdit):
+                widget.textChanged.connect(self.emit_filter_changed)
+            elif isinstance(widget, YesNoGroupBox):
+                widget.toggled.connect(self.emit_filter_changed)
+            elif isinstance(widget, EnumComboBox):
+                widget.currentTextChanged.connect(self.emit_filter_changed)
+            # Ingredients and subrecipes are not implemented
+
+        self.setLayout(filter_layout)
+
+        # Disabled for now
+        for disabled in [self.subrecipe_filter, self.ingredients_filter, self.subrecipes_filter]:
+            disabled.setEnabled(False)
+            self.contents.get(disabled)[0].setEnabled(False)
+
+    def emit_filter_changed(self):
+        source = self.sender()
+        if (entry := self.contents.get(source)) is not None:
+            if not entry[0].isChecked():
+                return
+        self.filter_changed.emit()
+
+    def filter(self, r: Recipe):
+        for checkbox, widget, field in self.contents.values():
+            if not checkbox.isChecked():
+                continue
+
+            if field is None:
+                continue
+            value = getattr(r, field.name)
+
+            if isinstance(widget, QLineEdit):
+                if re.search(widget.text(), r.title, re.IGNORECASE) is None:
+                    return False
+
+            elif isinstance(widget, YesNoGroupBox):
+                if value != widget.value():
+                    return False
+
+            elif isinstance(widget, EnumComboBox):
+                if value.capitalize() != widget.currentText():
+                    return False
+
+        return True
+
+    def save_state(self):
+        state = []
+        for checkbox, widget, _ in self.contents.values():
+            if isinstance(widget, QLineEdit):
+                value = widget.text()
+            elif isinstance(widget, YesNoGroupBox):
+                value = widget.state()
+            elif isinstance(widget, EnumComboBox):
+                value = widget.currentIndex()
+            else:
+                value = None
+            state.append((checkbox.isChecked(), value))
+        return state
+
+    def restore_state(self, state):
+        for (checkbox, widget, _), (checked, value) in zip(self.contents.values(), state):
+            checkbox.setChecked(checked)
+            if isinstance(widget, QLineEdit):
+                widget.setText(value)
+            elif isinstance(widget, YesNoGroupBox):
+                widget.set_state(value)
+            elif isinstance(widget, EnumComboBox):
+                widget.setCurrentIndex(value)
+            else:
+                pass
