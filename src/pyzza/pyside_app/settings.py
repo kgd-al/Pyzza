@@ -13,6 +13,8 @@ class Settings(StrEnum):
     RECIPES_SORTING = "recipes-sorting"
     RECIPES_FILTERING = "recipes-filtering"
 
+    RECIPE_DIALOG_GEOMETRY = "recipe-dialog-geometry"
+
     @staticmethod
     @lru_cache
     def _qsettings(): return QSettings()

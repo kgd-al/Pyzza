@@ -5,6 +5,22 @@ from typing import List, ClassVar, Dict, Iterable
 import yaml
 
 
+def get_field(dc, name):
+    for field in dataclasses.fields(dc):
+        if field.name == name:
+            return field
+    raise LookupError(f"Field {name} not found in {dc.__class__.__name__}")
+
+
+def named_fields(fields: List[str]):
+    def decorator(klass):
+        all_fields = {f.name: f for f in dataclasses.fields(klass)}
+        for f in fields:
+            setattr(klass, f.upper(), all_fields[f])
+        return klass
+    return decorator
+
+
 class Regimen(StrEnum):
     MEAT = auto()
     VEGGY = auto()
@@ -41,6 +57,12 @@ class IngredientEntry(yaml.YAMLObject):
 
     NO_UNIT: ClassVar[str] = "Ø"
 
+    def pretty_text(self, scaling=1):
+        tokens = [f"{scaling * self.amount:g}", self.name, self.qualif]
+        if self.unit != IngredientEntry.NO_UNIT:
+            tokens.insert(1, self.unit)
+        return " ".join(tokens)
+
 
 @dataclasses.dataclass(kw_only=True)
 class SubrecipeEntry(yaml.YAMLObject):
@@ -56,6 +78,11 @@ class DecorationEntry(yaml.YAMLObject):
     text: str
 
 
+IngredientsListEntry = IngredientEntry | SubrecipeEntry | DecorationEntry
+IngredientsList = List[IngredientsListEntry]
+
+
+@named_fields(["title", "basic", "type", "regimen", "duration"])
 @dataclasses.dataclass
 class Recipe(yaml.YAMLObject):
     yaml_tag = "!Recipe"
@@ -63,6 +90,7 @@ class Recipe(yaml.YAMLObject):
     title: str
 
     basic: bool
+
     type: DishType
     regimen: Regimen
     # status: ???Enum
@@ -73,7 +101,7 @@ class Recipe(yaml.YAMLObject):
 
     #id
 
-    ingredients: List[IngredientEntry | SubrecipeEntry | DecorationEntry]
+    ingredients: IngredientsList
     steps: List[str]
     notes: str
 
@@ -87,7 +115,10 @@ yaml.SafeDumper.add_multi_representer(
 )
 
 
-def write_recipes(recipes: Dict[str, Recipe], **kwargs):
+RecipesDict = Dict[str, Recipe]
+
+
+def write_recipes(recipes: RecipesDict, **kwargs):
     _kwargs = dict(stream=None, allow_unicode=True, sort_keys=False) | kwargs
     def do_write(): return yaml.safe_dump(list(recipes.values()), **_kwargs)
     stream = _kwargs["stream"]
@@ -102,7 +133,7 @@ def write_recipes(recipes: Dict[str, Recipe], **kwargs):
             return do_write()
 
 
-def load_recipes(stream=None) -> Dict[str, Recipe]:
+def load_recipes(stream=None) -> RecipesDict:
     def do_load(__f): return yaml.safe_load(__f)
     if hasattr(stream, "read") or isinstance(stream, bytes):
         recipes = do_load(stream)

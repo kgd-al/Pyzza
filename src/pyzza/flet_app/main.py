@@ -226,10 +226,7 @@ def details_view(page: ft.Page, r: Recipe) -> ft.Control:
 
     def format_ingredient(i):
         if isinstance(i, IngredientEntry):
-            tokens = [str(i.amount), i.name, i.qualif]
-            if i.unit != IngredientEntry.NO_UNIT:
-                tokens.insert(1, i.unit)
-            return list_item(" ".join(tokens))
+            return list_item(i.pretty_text())
         elif isinstance(i, DecorationEntry):
             return ft.Text(f"{i.text}", margin=ft.Margin(top=5))
         elif isinstance(i, SubrecipeEntry):

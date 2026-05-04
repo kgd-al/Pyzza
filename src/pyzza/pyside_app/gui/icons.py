@@ -17,3 +17,4 @@ class Icons(StrEnum):
         return self.get_image(self, prefix="")
 
     BASIC_RECIPE = auto()
+    BOOK = auto()

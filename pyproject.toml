@@ -28,7 +28,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dekstop = [
+desktop = [
+    "PySide6",
     "qtawesome"
 ]
 android = [

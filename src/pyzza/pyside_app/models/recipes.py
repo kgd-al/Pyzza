@@ -61,7 +61,7 @@ class RecipesProxyModel(QSortFilterProxyModel):
 
 
 class RecipeTupleView:
-    COLUMNS = ["basic", "type", "regimen", "duration", "title"]
+    COLUMNS = [Recipe.BASIC, Recipe.TYPE, Recipe.REGIMEN, Recipe.DURATION, Recipe.TITLE]
 
     @classmethod
     def columns(cls): return len(cls.COLUMNS)
@@ -82,7 +82,7 @@ class RecipeTupleView:
 
     @classmethod
     def _value(cls, recipe: Recipe, index: int):
-        return getattr(recipe, cls.COLUMNS[index])
+        return getattr(recipe, cls.COLUMNS[index].name)
 
     @classmethod
     def is_title(cls, col: int): return col == cls.title_column()
@@ -100,8 +100,8 @@ class RecipeTupleView:
     def icon_size(cls): return 32
 
     @classmethod
-    def title_column(cls): return len(cls.COLUMNS)-1
+    def title_column(cls): return cls.COLUMNS.index(Recipe.TITLE)
 
-
-valid_fields = {f.name for f in fields(Recipe)}
-assert all(col in valid_fields for col in RecipeTupleView.COLUMNS)
+#
+# valid_fields = {f.name for f in fields(Recipe)}
+# assert all(col in valid_fields for col in RecipeTupleView.COLUMNS)

@@ -8,6 +8,7 @@ from PySide6.QtWidgets import QMainWindow, QSplitter, QTableWidget, QVBoxLayout,
     QFileDialog, QHeaderView, QStyle, QPushButton, QWidgetAction
 
 from models.recipe import load_recipes
+from pyside_app.gui.about import AboutDialog
 from pyside_app.gui.filters import FilterView
 from pyside_app.gui.recipe import RecipeDialog
 from pyside_app.models.recipes import RecipesModel, RecipesProxyModel
@@ -36,10 +37,6 @@ class MainWindow(QMainWindow):
             self.load(last)
         self.restore_settings()
 
-    def closeEvent(self, event):
-        self.save_settings()
-        super().closeEvent(event)
-
     def _make_menu(self):
         menu = self.menuBar()
 
@@ -58,7 +55,7 @@ class MainWindow(QMainWindow):
             parent.addAction(_a)
             return _a
 
-        file_menu = menu.addMenu("File")
+        file_menu = menu.addMenu("F&ile")
 
         action(file_menu, "Load", "fa5s.folder-open", shortcut="Ctrl+O", fn=self.load_new_file)
         action(file_menu, "Save", "fa5s.save", shortcut="Ctrl+S")
@@ -66,12 +63,12 @@ class MainWindow(QMainWindow):
         action(file_menu, "Quit", "fa5s.power-off", fn=self.close)
 
         # --
-        recipe_menu = menu.addMenu("Recipes")
+        recipe_menu = menu.addMenu("&Recipes")
 
         add_recipe = action(recipe_menu, "Add", "fa5s.plus", shortcut="Ctrl+N")
 
         # --
-        filters_menu = menu.addMenu("Filters")
+        filters_menu = menu.addMenu("&Filters")
 
         show_filters = action(
             filters_menu, "Show", 'fa5s.search', checkable=True, shortcut="Ctrl+F",
@@ -88,12 +85,11 @@ class MainWindow(QMainWindow):
         )
 
         # --
-        misc_menu = menu.addMenu("Misc")
+        misc_menu = menu.addMenu("&Misc")
 
-        sync = action(misc_menu, "Sync", "fa5s.sync")
-        sync.triggered.connect(lambda: SyncDialog().exec())
+        sync = action(misc_menu, "Sync", "fa5s.sync", fn=lambda: SyncDialog().exec())
 
-        about = action(misc_menu, "About", "fa5s.info-circle")
+        about = action(misc_menu, "About", "fa5s.info-circle", fn=lambda: AboutDialog().exec())
 
     def _make_layout(self):
         self.splitter.addWidget(self.table)
@@ -146,8 +142,7 @@ class MainWindow(QMainWindow):
 
     def on_recipe_clicked(self, index):
         item = self.proxy_model.recipe_title(index)
-        recipe = self.recipes[item]
-        RecipeDialog(self, recipe).exec()
+        RecipeDialog(self, self.recipes, item).show()
 
     def on_filter_changed(self):
         self.proxy_model.invalidateFilter()
@@ -173,3 +168,7 @@ class MainWindow(QMainWindow):
         Settings.WINDOW_STATE.set(self.saveState())
         Settings.RECIPES_SORTING.set((self.proxy_model.sortColumn(), self.proxy_model.sortOrder()))
         Settings.RECIPES_FILTERING.set(self.filters.save_state())
+
+    def closeEvent(self, event):
+        self.save_settings()
+        super().closeEvent(event)

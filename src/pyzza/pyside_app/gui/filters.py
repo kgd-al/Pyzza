@@ -1,58 +1,11 @@
 import dataclasses
 import re
-from enum import StrEnum, Enum
-from types import NoneType
-from typing import Type
 
 from PySide6.QtCore import Qt, Signal, QSignalBlocker
-from PySide6.QtWidgets import QWidget, QLineEdit, QVBoxLayout, QHBoxLayout, QLabel, QRadioButton, QButtonGroup, QLayout, \
-    QCheckBox, QGridLayout, QComboBox, QSizePolicy, QListView, QListWidget
+from PySide6.QtWidgets import QWidget, QLineEdit, QLabel, QCheckBox, QGridLayout, QListWidget
 
 from models.recipe import DishType, Regimen, Duration, Recipe
-from pyside_app.gui.icons import Icons
-from pyside_app.gui.misc import line
-
-
-class YesNoGroupBox(QWidget):
-    toggled = Signal()
-
-    def __init__(self, parent=None):
-        QWidget.__init__(self, parent)
-
-        self.yes = QRadioButton("Yes")
-        self.no = QRadioButton("No")
-
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(self.yes)
-        layout.addWidget(self.no)
-        layout.addStretch()
-        self.setLayout(layout)
-
-        self.group = QButtonGroup(self)
-        self.group.addButton(self.yes)
-        self.group.addButton(self.no)
-
-        self.yes.pressed.connect(lambda: self.toggled.emit())
-        self.no.pressed.connect(lambda: self.toggled.emit())
-
-    def state(self): return self.yes.isChecked(), self.no.isChecked()
-
-    def set_state(self, state):
-        self.yes.setChecked(state[0])
-        self.no.setChecked(state[1])
-
-    def value(self): return self.yes.isChecked()
-
-
-class EnumComboBox(QComboBox):
-    def __init__(self, enum: Type[StrEnum], parent=None):
-        QComboBox.__init__(self, parent)
-        for e in enum:
-            self.addItem(Icons.get_image(e), e.name.capitalize())
-        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-        self.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContentsOnFirstShow)
-        self.adjustSize()
+from pyside_app.gui.misc import line, YesNoGroupBox, EnumComboBox
 
 
 class FilterView(QWidget):
