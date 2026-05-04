@@ -4,7 +4,7 @@ from enum import StrEnum, Enum
 from types import NoneType
 from typing import Type
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, Signal, QSignalBlocker
 from PySide6.QtWidgets import QWidget, QLineEdit, QVBoxLayout, QHBoxLayout, QLabel, QRadioButton, QButtonGroup, QLayout, \
     QCheckBox, QGridLayout, QComboBox, QSizePolicy, QListView, QListWidget
 
@@ -119,6 +119,12 @@ class FilterView(QWidget):
         for disabled in [self.subrecipe_filter, self.ingredients_filter, self.subrecipes_filter]:
             disabled.setEnabled(False)
             self.contents.get(disabled)[0].setEnabled(False)
+
+    def unset(self):
+        with QSignalBlocker(self):
+            for checkbox, _, _ in self.contents.values():
+                checkbox.setChecked(False)
+        self.filter_changed.emit()
 
     def emit_filter_changed(self):
         source = self.sender()

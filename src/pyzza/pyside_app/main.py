@@ -1,4 +1,4 @@
-from PySide6.QtCore import QCoreApplication
+from PySide6.QtCore import QCoreApplication, QTimer
 from PySide6.QtWidgets import QApplication
 
 from pyside_app.gui.main_window import MainWindow
@@ -12,6 +12,8 @@ if __name__ == "__main__":
 
     w = MainWindow()
     w.show()
+
+    QTimer.singleShot(100, lambda: w.table.doubleClicked.emit(w.proxy_model.index(0, 0)))
 
     app.exec()
 

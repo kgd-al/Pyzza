@@ -28,6 +28,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+dekstop = [
+    "qtawesome"
+]
 android = [
   "flet", "flet-datatable2",
 ]

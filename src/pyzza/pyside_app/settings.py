@@ -6,7 +6,6 @@ from PySide6.QtCore import QSettings
 
 class Settings(StrEnum):
     LAST_FILE = "last-cookbook"
-    LAST_DIRECTORY = "last-directory"
 
     WINDOW_GEOMETRY = "window-geom"
     WINDOW_STATE = "window-state"

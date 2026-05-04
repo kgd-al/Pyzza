@@ -3,8 +3,6 @@ from enum import StrEnum, auto
 from PySide6.QtGui import QIcon
 from anyio.functools import lru_cache
 
-ASSETS_PREFIX = ""
-
 
 class Icons(StrEnum):
     @staticmethod

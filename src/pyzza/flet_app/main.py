@@ -82,9 +82,11 @@ class MainWindow:
         self.recipes = {}
         self.update_data()
 
-    def debug_message(self, msg):
+    def debug_message(self, msg, clear=False):
         print(msg)
         debug_log = self.debug_dialog.content.content
+        if clear:
+            debug_log.value = ""
         if len(debug_log.value) > 0:
             debug_log.value += "\n"
         debug_log.value += msg
@@ -109,7 +111,7 @@ class MainWindow:
         content.update()
 
     async def sync_file(self):
-        self.debug_message("Requesting file from network")
+        self.debug_message("Requesting file from network", clear=True)
         self.sync_button.disabled = True
         data = await fetch(print_callback=self.debug_message)
         self.sync_button.disabled = False

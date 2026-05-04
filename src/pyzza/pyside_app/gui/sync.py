@@ -49,7 +49,7 @@ class SyncDialog(QDialog):
         self.is_file_sent = False
 
         if (last_file := Settings.LAST_FILE.get()) is not None:
-            self.input_field.setText(last_file)
+            self.input_field.setText(str(last_file))
         else:
             self.input_field.setPlaceholderText("File path")
             self.update_status()
@@ -82,7 +82,7 @@ class SyncDialog(QDialog):
     def on_file_select(self):
         file, _ = QFileDialog.getOpenFileName(
             self, "Open File",
-            dir=Settings.LAST_DIRECTORY.get(),
+            dir=Settings.LAST_FILE.get(),
             filter="*.rbk"
         )
         self.input_field.setText(file)
@@ -92,7 +92,6 @@ class SyncDialog(QDialog):
         if self.is_valid_file(file):
             self.is_file_sent = False
             Settings.LAST_FILE.set(file)
-            Settings.LAST_DIRECTORY.set(Path(file).parent)
             self.server.set_file(file)
             self.update_status()
 
