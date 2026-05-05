@@ -7,6 +7,7 @@ from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QFrame, QToolButton
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QRadioButton, QButtonGroup, QComboBox, \
     QSizePolicy
+from mypyc.primitives.misc_ops import type_object_op
 
 from pyside_app.gui.icons import Icons
 
@@ -36,9 +37,11 @@ def fa_icon_label(icon: str, size=32):
     return icon_label(qta.icon(icon), size)
 
 
-def fa_button(name: str):
+def fa_button(name: str, tooltip: str = None, **kwargs):
     button = QToolButton()
-    button.setIcon(qta.icon(name))
+    button.setIcon(qta.icon(name, **kwargs))
+    if tooltip:
+        button.setToolTip(tooltip)
     return button
 
 
@@ -62,8 +65,8 @@ class YesNoGroupBox(QWidget):
         self.group.addButton(self.yes)
         self.group.addButton(self.no)
 
-        self.yes.pressed.connect(lambda: self.toggled.emit())
-        self.no.pressed.connect(lambda: self.toggled.emit())
+        self.yes.toggled.connect(lambda: self.toggled.emit())
+        self.no.toggled.connect(lambda: self.toggled.emit())
 
     def state(self): return self.yes.isChecked(), self.no.isChecked()
 
@@ -71,7 +74,8 @@ class YesNoGroupBox(QWidget):
         self.yes.setChecked(state[0])
         self.no.setChecked(state[1])
 
-    def value(self): return self.yes.isChecked()
+    def value(self):
+        return self.yes.isChecked()
 
 
 class EnumComboBox(QComboBox):

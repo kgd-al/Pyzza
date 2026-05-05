@@ -1,25 +1,24 @@
 from pathlib import Path
 
 import qtawesome as qta
-
-from PySide6.QtCore import QSortFilterProxyModel, QModelIndex
+from PySide6.QtCore import QModelIndex
 from PySide6.QtGui import QAction, Qt
-from PySide6.QtWidgets import QMainWindow, QSplitter, QTableWidget, QVBoxLayout, QLineEdit, QWidget, QTableView, \
-    QFileDialog, QHeaderView, QStyle, QPushButton, QWidgetAction
+from PySide6.QtWidgets import QMainWindow, QSplitter, QTableView, \
+    QFileDialog, QHeaderView
 
-from models.recipe import load_recipes
+from models.recipe import RecipeBook
 from pyside_app.gui.about import AboutDialog
 from pyside_app.gui.filters import FilterView
 from pyside_app.gui.recipe import RecipeDialog
+from pyside_app.gui.sync import SyncDialog
 from pyside_app.models.recipes import RecipesModel, RecipesProxyModel
 from pyside_app.settings import Settings
-from pyside_app.gui.sync import SyncDialog
 
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.recipes = {}
+        self.book = RecipeBook()
 
         self.splitter = QSplitter()
 
@@ -122,8 +121,8 @@ class MainWindow(QMainWindow):
         self.table.sortByColumn(-1, Qt.SortOrder.AscendingOrder)
 
     def load(self, path: Path):
-        self.recipes = load_recipes(path)
-        self.proxy_model.setSourceModel(RecipesModel(self.recipes))
+        self.book = RecipeBook.load(path)
+        self.proxy_model.setSourceModel(RecipesModel(self.book))
         self.table.setCurrentIndex(QModelIndex())
 
     def load_new_file(self):
@@ -142,12 +141,12 @@ class MainWindow(QMainWindow):
 
     def on_recipe_clicked(self, index):
         item = self.proxy_model.recipe_title(index)
-        RecipeDialog(self, self.recipes, item).show()
+        RecipeDialog(self, self.book, item).show()
 
     def on_filter_changed(self):
         self.proxy_model.invalidateFilter()
-        if self.recipes:
-            shown, total = self.proxy_model.rowCount(), len(self.recipes)
+        if self.book:
+            shown, total = self.proxy_model.rowCount(), len(self.book)
             title = f"Pyzza Cookbook - {shown} recipes"
             if shown < total:
                 title += f" (out of {total})"

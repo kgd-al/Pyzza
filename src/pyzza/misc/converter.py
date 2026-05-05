@@ -2,8 +2,8 @@ import argparse
 import json
 from functools import lru_cache
 
-from ..models.recipe import Recipe, IngredientEntry, SubrecipeEntry, DecorationEntry, write_recipes, load_recipes, \
-    Regimen, DishType, Duration
+from ..models.recipe import Recipe, IngredientEntry, SubrecipeEntry, DecorationEntry, Regimen, DishType, Duration, \
+    RecipeBook
 
 
 @lru_cache
@@ -100,8 +100,10 @@ def main():
 
     # print(recipe.keys())
 
+    rbk = RecipeBook(recipes=recipes)
+
     with open(args.dest, "w") as f:
-        write_recipes(recipes, stream=f)
+        rbk.write(stream=f)
 
     with open(args.dest, "r") as f:
         recipes_roundtrip = load_recipes(f)

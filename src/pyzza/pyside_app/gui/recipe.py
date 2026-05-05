@@ -1,52 +1,79 @@
+import itertools
 from enum import StrEnum
 
 import qtawesome as qta
-from PySide6.QtGui import QIcon, Qt
+from PySide6.QtCore import QEvent, QSize
+from PySide6.QtGui import Qt, QKeyEvent, QFontMetrics
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QDoubleSpinBox, QTextEdit, \
-    QToolButton, QListWidget, QListWidgetItem, QPushButton, QAbstractScrollArea, QCheckBox, QComboBox, QListView, \
-    QAbstractItemView
+    QListWidget, QListWidgetItem, QPushButton, QAbstractScrollArea, QCheckBox, QStyledItemDelegate, \
+    QAbstractItemDelegate, QLineEdit
 
-from models.recipe import IngredientsListEntry, DecorationEntry, IngredientEntry, SubrecipeEntry, RecipesDict, Recipe
+from models.recipe import IngredientsListEntry, DecorationEntry, IngredientEntry, SubrecipeEntry, Recipe, \
+    RecipeBook
+from pyside_app.gui.delegates import IngredientsListDelegate, StepsListDelegate
 from pyside_app.gui.icons import Icons
+from pyside_app.gui.list_controls import ListControls
 from pyside_app.gui.misc import line, EnumComboBox, icon_label, fa_button
 from pyside_app.settings import Settings
 
 
-def list_item_widget(text: str):
-    return QListWidgetItem(qta.icon("mdi.chevron-right"), text)
+def list_item_widget(text: str, editable=True) -> QListWidgetItem:
+    item = QListWidgetItem(qta.icon("mdi.chevron-right"), text)
+    if editable:
+        item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEditable)
+    return item
 
 
-def ingredient_widget(i: IngredientsListEntry, is_first):
+def ingredient_widget(i: IngredientsListEntry, editable=True):
     if isinstance(i, DecorationEntry):
-        return QListWidgetItem(("\n" if not is_first else "") + i.text)
+        item = DecorationItem(i.text)
     elif isinstance(i, IngredientEntry):
-        return list_item_widget(i.pretty_text())
-
+        item = list_item_widget(i.pretty_text())
     elif isinstance(i, SubrecipeEntry):
-        return QListWidgetItem(qta.icon("fa5s.link"), i.name)
+        item = QListWidgetItem(qta.icon("fa5s.link"), i.name)
 
-    return QListWidgetItem("Error")
+    else:
+        return QListWidgetItem("Error")
+
+    if editable:
+        item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEditable)
+
+    return item
+
+
+class DecorationItem(QListWidgetItem):
+    def __init__(self, text):
+        super().__init__(text)
+
+    def maybe_adjust_height(self, row: int):
+        fm = QFontMetrics(self.font())
+        self.setSizeHint(QSize(0, round(1.5 * fm.height())))
+        self.setTextAlignment(Qt.AlignmentFlag.AlignBottom)
 
 
 class RecipeDialog(QDialog):
     def __init__(self, parent: QWidget,
-                 recipes: RecipesDict, recipe_name: str,
+                 book: RecipeBook, recipe_name: str,
                  scaling: float = 1.0):
         super().__init__(parent=parent)
-        self.recipes = recipes
-        self.recipe = recipes[recipe_name]
+        self.book = book
+        self.recipe = self.book.recipes[recipe_name]
 
         self.editable = None
 
+        self.title, self.title_edit = QLabel(), QLineEdit()
         self.status_items, self.status_edit_items = None, None
 
         self.ingredients_list = QListWidget(self)
-        self.ingredients_list_controls = ListControls(self.ingredients_list)
+        self.ingredients_list_controls = ListControls(
+            self.ingredients_list, lambda: ingredient_widget(DecorationEntry(text="Unset")))
+        self.ingredients_list.setItemDelegate(IngredientsListDelegate(self))
 
         self.steps_list = QListWidget(self)
-        self.steps_list_controls = ListControls(self.steps_list)
+        self.steps_list_controls = ListControls(
+            self.steps_list, lambda: list_item_widget(""))
+        self.steps_list.setItemDelegate(StepsListDelegate(self))
         self.steps_list.setWordWrap(True)
-        self.steps_list.setEditTriggers(QListWidget.EditTrigger.DoubleClicked)
         self.steps_list.setSpacing(5)
 
         self.notes = QTextEdit(self)
@@ -62,6 +89,8 @@ class RecipeDialog(QDialog):
         self._set_editable(False)
         self._set_editable(True)
 
+        self._adjust_decorations_heights()
+
         self.restore_settings()
 
     def _make_layout(self):
@@ -72,12 +101,13 @@ class RecipeDialog(QDialog):
         header_centerer.addStretch()
         header_centerer.addLayout(header_layout := QVBoxLayout())
         header_centerer.addStretch()
-        header_layout.addWidget(title := QLabel(r.title))
-        font = title.font()
+        header_layout.addWidget(self.title)
+        header_layout.addWidget(self.title_edit)
+        font = self.title.font()
         font.setBold(True)
         font.setPointSize(font.pointSize() + 2)
-        title.setFont(font)
-        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.title.setFont(font)
+        self.title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         header_layout.addWidget(line())
 
         layout.addSpacing(10)
@@ -136,7 +166,7 @@ class RecipeDialog(QDialog):
         layout.addSpacing(10)
 
         controls_layout = QHBoxLayout()
-        controls_layout.addWidget(b_delete := fa_button("fa5s.trash-alt"))
+        controls_layout.addWidget(b_delete := fa_button("fa5s.trash-alt", color="black"))
         controls_layout.addStretch()
         controls_layout.addWidget(b_edit := fa_button("fa5s.edit"))
         controls_layout.addWidget(b_validate := fa_button("fa5s.check-circle"))
@@ -147,18 +177,24 @@ class RecipeDialog(QDialog):
 
         self.button_edit = b_edit
         self.button_validate = b_validate
+        b_delete.setStyleSheet("background-color: red")
         return b_delete, b_edit, b_validate, b_quit
 
     def _fill_in(self):
+        self.title.setText(self.recipe.title)
+        self.title_edit.setText(self.recipe.title)
+
+
+
         for i, ingredient in enumerate(self.recipe.ingredients):
-            self.ingredients_list.addItem(item := ingredient_widget(ingredient, i == 0))
+            self.ingredients_list.addItem(item := ingredient_widget(ingredient))
             if isinstance(ingredient, SubrecipeEntry):
                 recipe = ingredient.name
                 self.ingredients_list.setItemWidget(item, button := QPushButton(recipe))
                 item.setSizeHint(button.sizeHint())
                 button.setFixedSize(button.sizeHint())
                 button.clicked.connect(
-                    lambda: RecipeDialog(self, self.recipes, recipe,
+                    lambda: RecipeDialog(self, self.book, recipe,
                                          self.portions_scaling()).show())
 
         for i, step in enumerate(self.recipe.steps):
@@ -173,6 +209,10 @@ class RecipeDialog(QDialog):
         b_validate.clicked.connect(lambda: self._set_editable(False))
         b_quit.clicked.connect(self.accept)
 
+        model = self.ingredients_list.model()
+        for signal in ["dataChanged", "rowsInserted", "rowsMoved", "rowsRemoved"]:
+            getattr(model, signal).connect(self._adjust_decorations_heights)
+
     def _portions_changed(self):
         ratio = self.portions_scaling()
         for i, ingredient in enumerate(self.recipe.ingredients):
@@ -180,8 +220,18 @@ class RecipeDialog(QDialog):
                 item = self.ingredients_list.item(i)
                 item.setText(ingredient.pretty_text(ratio))
 
+    def _adjust_decorations_heights(self):
+        for i in range(self.ingredients_list.count()):
+            if isinstance(e := self.ingredients_list.item(i), DecorationItem):
+                e.maybe_adjust_height(i)
+
     def _set_editable(self, editable):
         self.editable = editable
+        if editable:
+            self.portions.setValue(self.recipe.n_portions)
+        self.recipe = Recipe(
+            title=self.title_edit.text(),
+        )
 
         self.status_items.setVisible(not self.editable)
         self.status_edit_items.setVisible(self.editable)
@@ -210,45 +260,3 @@ class RecipeDialog(QDialog):
         super().closeEvent(event)
 
 
-class ListControls(QWidget):
-    def __init__(self, parent: QListView):
-        super().__init__(parent)
-
-        self.list = parent
-        self.list.setDragEnabled(True)
-        self.list.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)
-        self.list.setDefaultDropAction(Qt.DropAction.MoveAction)
-        self.list.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
-
-        self.setLayout(layout := QVBoxLayout())
-        layout.addWidget(add := fa_button("ri.insert-row-bottom"))
-        layout.addWidget(rmv := fa_button("ri.delete-row"))
-        layout.addWidget(edt := fa_button("fa5s.edit"))
-        layout.addSpacing(12)
-        layout.addWidget(up := fa_button("ri.arrow-drop-up-line"))
-        layout.addWidget(dwn := fa_button("ri.arrow-drop-down-line"))
-        layout.addStretch()
-        self.add, self.rmv, self.edt, self.up, self.dwn = add, rmv, edt, up, dwn
-
-        parent.selectionModel().selectionChanged.connect(self._on_selection_changed)
-        self._on_selection_changed()
-
-        # add.clicked.connect(add_callback)
-        # rmv.clicked.connect(self.remove)
-        # edt.clicked.connect()
-
-    def _on_selection_changed(self):
-        selection = self.list.selectionModel().selectedRows()
-        any_selected = len(selection) > 0
-        for b in [self.rmv, self.edt, self.up, self.dwn]:
-            b.setEnabled(any_selected)
-        self.up
-
-    def wrapper(self):
-        widget = QWidget()
-        widget.setLayout(layout := QHBoxLayout())
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-        layout.addWidget(self, stretch=0)
-        layout.addWidget(self.list, stretch=1)
-        return widget

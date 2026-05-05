@@ -16,7 +16,7 @@ import flet_datatable2 as ftd
 
 from icons import Icons
 from networking.sync_server import fetch
-from models.recipe import load_recipes, Recipe, IngredientEntry, SubrecipeEntry, DecorationEntry, write_recipes
+from models.recipe import Recipe, IngredientEntry, SubrecipeEntry, DecorationEntry, RecipeBook
 from misc.debug import kgd_debug
 
 
@@ -79,7 +79,7 @@ class MainWindow:
         )
         self.page = page
 
-        self.recipes = {}
+        self.book = RecipeBook()
         self.update_data()
 
     def debug_message(self, msg, clear=False):
@@ -116,11 +116,11 @@ class MainWindow:
         data = await fetch(print_callback=self.debug_message)
         self.sync_button.disabled = False
 
-        recipes = load_recipes(data)
+        book = RecipeBook.load(data)
         self.debug_message(f"> {len(recipes)} recipes")
-        if recipes:
+        if book:
             CACHE.parent.mkdir(parents=True, exist_ok=True)
-            write_recipes(recipes, stream=str(CACHE))
+            book.write(stream=str(CACHE))
             self.debug_message(f"Wrote recipes to {CACHE}")
             self.update_data()
             await self.sync_success()
@@ -137,10 +137,10 @@ class MainWindow:
         self.sync_hint.visible = False
         self.table.visible = True
 
-        new_recipes = load_recipes(CACHE)
-        self.recipes = new_recipes
+        new_book = RecipeBook.load(CACHE)
+        self.book = new_book
 
-        self.page.title = f"Pyzza CookBook - {len(self.recipes)} recipes"
+        self.page.title = f"Pyzza CookBook - {len(self.book)} recipes"
 
         callbacks = dict(
             on_tap=self.show_recipe,
@@ -166,7 +166,7 @@ class MainWindow:
                     ft.DataCell(ft.Text(r.title), **callbacks),
                 ],
 
-            ) for r in self.recipes.values()
+            ) for r in self.book.recipes.values()
         ]
         self.page.update()
 
@@ -348,7 +348,7 @@ def main(page: ft.Page):
                                     title=ft.Text(recipe),
                                     automatically_imply_leading=True,  # back arrow
                                 ),
-                                details_view(page, main_window.recipes[recipe]),
+                                details_view(page, main_window.book.recipes[recipe]),
                             ]
                         )
                     )

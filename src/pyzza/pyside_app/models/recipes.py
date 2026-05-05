@@ -6,14 +6,14 @@ from PySide6 import QtCore
 from PySide6.QtCore import Qt, QSize, QSortFilterProxyModel
 from PySide6.QtGui import QIcon
 
-from models.recipe import Recipe
+from models.recipe import Recipe, RecipeBook
 from pyside_app.gui.icons import Icons
 
 
 class RecipesModel(QtCore.QAbstractTableModel):
-    def __init__(self, data: Dict[str, Recipe]):
+    def __init__(self, book: RecipeBook):
         super().__init__()
-        self._data = list(data.values())
+        self._data = list(book.recipes.values())
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         def get(): return RecipeTupleView.data(self._data[index.row()], index.column())

@@ -10,5 +10,5 @@ class AboutDialog(QDialog):
 
         self.setLayout(layout := QGridLayout())
 
-        layout.addWidget(QLabel("Text"), 0, 0, 1, 3)
+        layout.addWidget(QLabel("Made with love <3"), 0, 0, 1, 3)
         layout.addWidget(icon_label(Icons.BOOK.image(), size=512), 1, 0, 2, 2)

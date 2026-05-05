@@ -39,7 +39,7 @@ class FilterView(QWidget):
             for filter_widget, label, field in [
                 (self.title_filter, "Name:", "title"),
                 (self.basic_filter, "Basic?", "basic"),
-                (self.subrecipe_filter, "Sub recipe?", None),
+                (self.subrecipe_filter, "Sub recipe?", "is_sub_recipe"),
                 (self.type_filter, "Type", "type"),
                 (self.regimen_filter, "Regimen", "regimen"),
                 (self.duration_filter, "Duration", "duration"),
@@ -69,7 +69,7 @@ class FilterView(QWidget):
         self.setLayout(filter_layout)
 
         # Disabled for now
-        for disabled in [self.subrecipe_filter, self.ingredients_filter, self.subrecipes_filter]:
+        for disabled in [self.ingredients_filter, self.subrecipes_filter]:
             disabled.setEnabled(False)
             self.contents.get(disabled)[0].setEnabled(False)
 

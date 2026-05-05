@@ -1,6 +1,6 @@
 import dataclasses
 from enum import StrEnum, auto
-from typing import List, ClassVar, Dict, Iterable
+from typing import List, ClassVar, Dict, Iterable, Set
 
 import yaml
 
@@ -70,12 +70,18 @@ class SubrecipeEntry(yaml.YAMLObject):
 
     name: str
 
+    def pretty_text(self, scaling=1):
+        return self.name
+
 
 @dataclasses.dataclass(kw_only=True)
 class DecorationEntry(yaml.YAMLObject):
     yaml_tag = "!Decoration"
 
     text: str
+
+    def pretty_text(self, scaling=1):
+        return self.text
 
 
 IngredientsListEntry = IngredientEntry | SubrecipeEntry | DecorationEntry
@@ -105,6 +111,66 @@ class Recipe(yaml.YAMLObject):
     steps: List[str]
     notes: str
 
+    is_sub_recipe: bool = False
+
+
+RecipesDict = Dict[str, Recipe]
+
+
+@dataclasses.dataclass
+class RecipeBook:
+    recipes: RecipesDict = dataclasses.field(default_factory=dict)
+    ingredients: Set[str] = dataclasses.field(default_factory=set)
+    units: Set[str] = dataclasses.field(default_factory=set)
+
+    def __post_init__(self):
+        for r in self.recipes.values():
+            r.type = DishType(r.type)
+            r.regimen = Regimen(r.regimen)
+            r.duration = Duration(r.duration)
+
+            for i in r.ingredients:
+                if isinstance(i, IngredientEntry):
+                    self.ingredients.add(i.name)
+                    self.units.add(i.unit)
+
+                elif isinstance(i, SubrecipeEntry):
+                    self.recipes[i.name].is_sub_recipe = True
+
+            # print(r)
+
+    def __len__(self): return len(self.recipes)
+    def __bool__(self): return len(self) > 0
+
+    def write(self, **kwargs):
+        _kwargs = dict(stream=None, allow_unicode=True, sort_keys=False) | kwargs
+        def do_write(): return yaml.safe_dump(list(self.recipes.values()), **_kwargs)
+        stream = _kwargs["stream"]
+        if stream is None:
+            return do_write()
+        else:
+            if not hasattr(stream, "read"):
+                with open(stream, "w") as f:
+                    _kwargs["stream"] = f
+                    return do_write()
+            else:
+                return do_write()
+
+    @classmethod
+    def load(cls, stream=None) -> 'RecipeBook':
+        recipes = cls(), None
+        def do_load(__f): return yaml.safe_load(__f)
+        if hasattr(stream, "read") or isinstance(stream, bytes):
+            recipes = do_load(stream)
+        else:
+            with open(stream, "r") as f:
+                recipes = do_load(f)
+
+        if recipes is None:
+            raise RuntimeError(f"Failed to read recipes from stream '{stream}'")
+
+        return cls(recipes={r.title: r for r in recipes})
+
 
 for __class in [IngredientEntry, SubrecipeEntry, DecorationEntry, Recipe]:
     yaml.SafeLoader.add_constructor(getattr(__class, "yaml_tag"), getattr(__class, "from_yaml"))
@@ -115,37 +181,3 @@ yaml.SafeDumper.add_multi_representer(
 )
 
 
-RecipesDict = Dict[str, Recipe]
-
-
-def write_recipes(recipes: RecipesDict, **kwargs):
-    _kwargs = dict(stream=None, allow_unicode=True, sort_keys=False) | kwargs
-    def do_write(): return yaml.safe_dump(list(recipes.values()), **_kwargs)
-    stream = _kwargs["stream"]
-    if stream is None:
-        return do_write()
-    else:
-        if not hasattr(stream, "read"):
-            with open(stream, "w") as f:
-                _kwargs["stream"] = f
-                return do_write()
-        else:
-            return do_write()
-
-
-def load_recipes(stream=None) -> RecipesDict:
-    def do_load(__f): return yaml.safe_load(__f)
-    if hasattr(stream, "read") or isinstance(stream, bytes):
-        recipes = do_load(stream)
-    else:
-        with open(stream, "r") as f:
-            recipes = do_load(f)
-
-    for r in recipes:
-        r.type = DishType(r.type)
-        r.regimen = Regimen(r.regimen)
-        r.duration = Duration(r.duration)
-
-        # print(r)
-
-    return {r.title: r for r in recipes}
