@@ -4,9 +4,9 @@ import qtawesome as qta
 from PySide6.QtCore import QModelIndex
 from PySide6.QtGui import QAction, Qt
 from PySide6.QtWidgets import QMainWindow, QSplitter, QTableView, \
-    QFileDialog, QHeaderView
+    QFileDialog, QHeaderView, QMessageBox
 
-from models.recipe import RecipeBook
+from models.recipe import RecipeBook, Recipe
 from pyside_app.gui.about import AboutDialog
 from pyside_app.gui.filters import FilterView
 from pyside_app.gui.recipe import RecipeDialog
@@ -19,6 +19,8 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.book = RecipeBook()
+        self.edited = False
+        self.path = None
 
         self.splitter = QSplitter()
 
@@ -57,14 +59,16 @@ class MainWindow(QMainWindow):
         file_menu = menu.addMenu("F&ile")
 
         action(file_menu, "Load", "fa5s.folder-open", shortcut="Ctrl+O", fn=self.load_new_file)
-        action(file_menu, "Save", "fa5s.save", shortcut="Ctrl+S")
+        action(file_menu, "Save", "fa5s.save", shortcut="Ctrl+S", fn=self.save)
+        action(file_menu, "Save as", "fa5s.save", shortcut="Ctrl+Shift+S", fn=self.save_as)
         action(file_menu, "Print", "fa5s.print", shortcut="Ctrl+P")
         action(file_menu, "Quit", "fa5s.power-off", fn=self.close)
 
         # --
         recipe_menu = menu.addMenu("&Recipes")
 
-        add_recipe = action(recipe_menu, "Add", "fa5s.plus", shortcut="Ctrl+N")
+        add_recipe = action(recipe_menu, "Add", "fa5s.plus", shortcut="Ctrl+N", fn=self.add_recipe)
+        del_recipe = action(recipe_menu, "Del", "fa5s.minus", shortcut="Delete", fn=self.del_recipe)
 
         # --
         filters_menu = menu.addMenu("&Filters")
@@ -120,10 +124,44 @@ class MainWindow(QMainWindow):
 
         self.table.sortByColumn(-1, Qt.SortOrder.AscendingOrder)
 
+    def add_recipe(self):
+        row = len(self.book)
+        recipe = self.proxy_model.sourceModel().addRecipe()
+        self._on_recipe_edited(recipe)
+
+    def del_recipe(self):
+        indices = self.table.selectionModel().selectedRows()
+        model = self.proxy_model.sourceModel()
+        for proxy_index in sorted(indices, reverse=True):
+            source_index = self.proxy_model.mapToSource(proxy_index)
+            model.removeRow(source_index.row())
+
+    def save(self, path: Path | str = None, request_file=False):
+        path = path or self.path
+        if request_file or path is None:
+            path, _ = QFileDialog.getSaveFileName(
+                self, "Enter savefile name", Settings.LAST_FILE.get(),
+                "Cookbook (*.rbk)"
+            )
+            if not path:
+                return
+
+        self.book.write(stream=path)
+        self.edited = False
+        self._update_title()
+
+    def save_as(self):
+        self.save(None, request_file=True)
+
     def load(self, path: Path):
         self.book = RecipeBook.load(path)
+        self.path = path
+        self.edited = False
+
         self.proxy_model.setSourceModel(RecipesModel(self.book))
         self.table.setCurrentIndex(QModelIndex())
+
+        self._update_title()
 
     def load_new_file(self):
         path, _ = QFileDialog.getOpenFileName(
@@ -141,16 +179,32 @@ class MainWindow(QMainWindow):
 
     def on_recipe_clicked(self, index):
         item = self.proxy_model.recipe_title(index)
-        RecipeDialog(self, self.book, item).show()
+        rd = RecipeDialog(self, self.book, item)
+        rd.edit_validated.connect(self._on_recipe_edited)
+        rd.show()
+
+    def _on_recipe_edited(self, recipe: Recipe):
+        model: RecipesModel = self.proxy_model.sourceModel()
+        model.recipe_changed(recipe)
+        self.edited = True
+        self._update_title()
 
     def on_filter_changed(self):
         self.proxy_model.invalidateFilter()
+        self._update_title()
+
+    def _update_title(self):
+        title = f"Pyzza Cookbook - "
         if self.book:
             shown, total = self.proxy_model.rowCount(), len(self.book)
-            title = f"Pyzza Cookbook - {shown} recipes"
+            title += f"{shown} recipes"
             if shown < total:
                 title += f" (out of {total})"
-            self.setWindowTitle(title)
+        else:
+            title += "No book loaded"
+        if self.edited:
+            title += "*"
+        self.setWindowTitle(title)
 
     def restore_settings(self):
         if geom := Settings.WINDOW_GEOMETRY.get():
@@ -169,5 +223,25 @@ class MainWindow(QMainWindow):
         Settings.RECIPES_FILTERING.set(self.filters.save_state())
 
     def closeEvent(self, event):
-        self.save_settings()
-        super().closeEvent(event)
+        yes, no, cancel = QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.No, QMessageBox.StandardButton.Cancel
+        if self.edited:
+            answer = QMessageBox.question(
+                self, "Unsaved", "Confirm changes before closing?",
+                yes | no | cancel, yes
+            )
+            if answer == yes:
+                self.save()
+                close = True
+            elif answer == no:
+                close = True
+            else:
+                close = False
+        else:
+            close = True
+
+        if close:
+            self.save_settings()
+            super().closeEvent(event)
+
+        else:
+            event.ignore()

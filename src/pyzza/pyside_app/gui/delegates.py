@@ -1,7 +1,8 @@
 from PySide6.QtCore import QEvent, Qt
 from PySide6.QtGui import QKeyEvent
-from PySide6.QtWidgets import QTextEdit, QAbstractItemDelegate, QStyledItemDelegate
+from PySide6.QtWidgets import QTextEdit, QAbstractItemDelegate, QStyledItemDelegate, QDialog
 
+from models.recipe import RecipeBook
 from pyside_app.gui.ingredients_list_entry_dialog import IngredientsListEntryDialog
 
 
@@ -22,9 +23,19 @@ class StepsListDelegate(QStyledItemDelegate):
 
 
 class IngredientsListDelegate(QStyledItemDelegate):
+    def __init__(self, book: RecipeBook, parent=None):
+        super().__init__(parent)
+        self._book = book
+
     def createEditor(self, parent, option, index, /):
-        return IngredientsListEntryDialog(parent)
+        return IngredientsListEntryDialog(
+            entry=index.data(Qt.ItemDataRole.UserRole),
+            book=self._book, parent=parent)
 
     def setModelData(self, editor: IngredientsListEntryDialog, model, index, /):
+        if editor.result() == QDialog.DialogCode.Rejected:
+            self.closeEditor.emit(editor, QAbstractItemDelegate.EndEditHint.RevertModelCache)
+            return
         entry = editor.entry()
         model.setData(index, entry.pretty_text())
+        model.setData(index, entry, role=Qt.ItemDataRole.UserRole)

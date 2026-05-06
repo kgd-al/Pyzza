@@ -7,7 +7,6 @@ from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QFrame, QToolButton
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QRadioButton, QButtonGroup, QComboBox, \
     QSizePolicy
-from mypyc.primitives.misc_ops import type_object_op
 
 from pyside_app.gui.icons import Icons
 
@@ -28,9 +27,13 @@ def decoration(text):
 
 def icon_label(icon: QIcon, size=32):
     label = QLabel()
+    set_icon(label, icon, size)
+    return label
+
+
+def set_icon(label: QLabel, icon: QIcon, size: int = 32):
     label.setPixmap(icon.pixmap(size, size))
     label.setFixedSize(size, size)
-    return label
 
 
 def fa_icon_label(icon: str, size=32):
@@ -81,6 +84,7 @@ class YesNoGroupBox(QWidget):
 class EnumComboBox(QComboBox):
     def __init__(self, enum: Type[StrEnum], parent=None):
         QComboBox.__init__(self, parent)
+        self.enum = enum
         for e in enum:
             self.addItem(Icons.get_image(e), self.display(e))
         self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
@@ -93,3 +97,4 @@ class EnumComboBox(QComboBox):
     def setCurrentEnum(self, e: StrEnum):
         self.setCurrentText(self.display(e))
 
+    def currentEnum(self) -> StrEnum: return getattr(self.enum, self.currentText().upper())

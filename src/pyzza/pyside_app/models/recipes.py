@@ -3,10 +3,10 @@ from enum import StrEnum
 from typing import Dict
 
 from PySide6 import QtCore
-from PySide6.QtCore import Qt, QSize, QSortFilterProxyModel
+from PySide6.QtCore import Qt, QSize, QSortFilterProxyModel, QModelIndex
 from PySide6.QtGui import QIcon
 
-from models.recipe import Recipe, RecipeBook
+from models.recipe import Recipe, RecipeBook, DishType, Regimen, Duration
 from pyside_app.gui.icons import Icons
 
 
@@ -45,6 +45,28 @@ class RecipesModel(QtCore.QAbstractTableModel):
 
     def recipe(self, index: int) -> Recipe:
         return self._data[index]
+
+    def add_recipe(self):
+        row = self.rowCount()
+        self.beginInsertRows(QModelIndex(), row, row)
+        recipe = Recipe(
+            title="Poudre de pinrlinpinpin",
+            basic=False,
+            type=DishType.SALTY,
+            regimen=Regimen.MEAT,
+            duration=Duration.SHORT,
+            n_portions=0,
+            t_portions="",
+            ingredients=[],
+            steps=[],
+            notes=""
+        )
+        self._data.append(recipe)
+        self.endInsertRows()
+
+    def recipe_changed(self, recipe: Recipe):
+        row = self._data.index(recipe)
+        self.dataChanged.emit(self.index(row, 0), self.index(row, self.columnCount()-1))
 
 
 class RecipesProxyModel(QSortFilterProxyModel):

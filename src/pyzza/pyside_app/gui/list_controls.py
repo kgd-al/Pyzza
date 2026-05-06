@@ -1,16 +1,18 @@
 from typing import Callable
-from unittest import case
 
 from PySide6.QtCore import QModelIndex, Qt, QEvent
 from PySide6.QtGui import QKeyEvent
-from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QAbstractItemView, QListView, QListWidget, \
-    QListWidgetItem
+from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QAbstractItemView, QListWidget, \
+    QAbstractItemDelegate
 
 from pyside_app.gui.misc import fa_button
 
 
 class ListControls(QWidget):
-    def __init__(self, parent: QListWidget, item_builder: Callable = None):
+    def __init__(self,
+                 parent: QListWidget,
+                 item_builder: Callable = None,
+                 add_shortcut = None):
         super().__init__(parent)
 
         self.item_builder = item_builder
@@ -30,6 +32,9 @@ class ListControls(QWidget):
         layout.addWidget(dwn := fa_button("ri.arrow-drop-down-line", "Down"))
         layout.addStretch()
         self.add, self.rmv, self.edt, self.up, self.dwn = buttons = add, rmv, edt, up, dwn
+
+        if add_shortcut is not None:
+            add.setShortcut(add_shortcut)
 
         parent.selectionModel().selectionChanged.connect(self._on_selection_changed)
         self._on_selection_changed()
@@ -68,7 +73,14 @@ class ListControls(QWidget):
 
     def _on_add_clicked(self):
         row = self.list.model().rowCount()
+
+        def _handle_cancel(target, hint: QAbstractItemDelegate.EndEditHint):
+            if hint == QAbstractItemDelegate.EndEditHint.RevertModelCache:
+                self.list.model().removeRow(row)
+            self.list.itemDelegate().closeEditor.disconnect(_handle_cancel)
+
         self.list.insertItem(row, self.item_builder())
+        self.list.itemDelegate().closeEditor.connect(_handle_cancel)
         self.list.edit(self.list.model().index(row, 0))
 
     def _on_edit_clicked(self):

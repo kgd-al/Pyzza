@@ -1,8 +1,22 @@
 import dataclasses
+from dataclasses import Field
 from enum import StrEnum, auto
-from typing import List, ClassVar, Dict, Iterable, Set
+from typing import List, ClassVar, Dict, Iterable, Set, TYPE_CHECKING
 
 import yaml
+
+
+def named_fields():
+    """
+     This generates a named accessor for every field in the dataclass.
+     Note: this is not enough for the IDE to pick up on it so you need to also
+     generate stubs (see generate_stubs in pyzza.pyside_app)
+     """
+    def decorator(klass):
+        for f in dataclasses.fields(klass):
+            setattr(klass, f.name.upper(), f)
+        return klass
+    return decorator
 
 
 def get_field(dc, name):
@@ -10,15 +24,6 @@ def get_field(dc, name):
         if field.name == name:
             return field
     raise LookupError(f"Field {name} not found in {dc.__class__.__name__}")
-
-
-def named_fields(fields: List[str]):
-    def decorator(klass):
-        all_fields = {f.name: f for f in dataclasses.fields(klass)}
-        for f in fields:
-            setattr(klass, f.upper(), all_fields[f])
-        return klass
-    return decorator
 
 
 class Regimen(StrEnum):
@@ -88,7 +93,7 @@ IngredientsListEntry = IngredientEntry | SubrecipeEntry | DecorationEntry
 IngredientsList = List[IngredientsListEntry]
 
 
-@named_fields(["title", "basic", "type", "regimen", "duration"])
+@named_fields()
 @dataclasses.dataclass
 class Recipe(yaml.YAMLObject):
     yaml_tag = "!Recipe"
@@ -96,6 +101,7 @@ class Recipe(yaml.YAMLObject):
     title: str
 
     basic: bool
+    # BASIC: dataclasses.Field
 
     type: DishType
     regimen: Regimen
@@ -112,6 +118,15 @@ class Recipe(yaml.YAMLObject):
     notes: str
 
     is_sub_recipe: bool = False
+
+    if TYPE_CHECKING:  # Just to make IDEs happy, actually filled by the decorator
+        TITLE: Field = None
+        BASIC: Field = None
+        TYPE: Field = None
+        REGIMEN: Field = None
+        DURATION: Field = None
+        N_PORTIONS: Field = None
+        T_PORTIONS: Field = None
 
 
 RecipesDict = Dict[str, Recipe]
