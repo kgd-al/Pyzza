@@ -128,7 +128,6 @@ class Recipe(yaml.YAMLObject):
         N_PORTIONS: Field = None
         T_PORTIONS: Field = None
 
-
 RecipesDict = Dict[str, Recipe]
 
 
@@ -156,6 +155,21 @@ class RecipeBook:
 
     def __len__(self): return len(self.recipes)
     def __bool__(self): return len(self) > 0
+
+    @classmethod
+    def default_recipe(cls) -> 'Recipe':
+        return Recipe(
+            title="Poudre de pinrlinpinpin",
+            basic=False,
+            type=DishType.SALTY,
+            regimen=Regimen.MEAT,
+            duration=Duration.SHORT,
+            n_portions=0,
+            t_portions="",
+            ingredients=[],
+            steps=[],
+            notes=""
+        )
 
     def write(self, **kwargs):
         _kwargs = dict(stream=None, allow_unicode=True, sort_keys=False) | kwargs

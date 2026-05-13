@@ -7,7 +7,7 @@ bid=studio.almann.pyzza
 #$adb shell getprop ro.product.nickname ro.product.cpu.abi
 #echo
 
-flet build apk
+flet build apk --verbose
 
 printf "Removing previous version: "
 $adb uninstall $bid

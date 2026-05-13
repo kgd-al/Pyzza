@@ -9,11 +9,12 @@ from pyside_app.gui.main_window import MainWindow
 import pyside_app.rc_icons  # Needed to load the icons
 
 # TODOLIST:
-# > TODO: Adding/removing recipe
 # - TODO: Handling search for ingredients and sub-recipes
 # - TODO: Pdf printing
-# - TODO: Make the about
 # - TODO: List parent recipes in sub-recipes?
+# - TODO: Festive overlay
+# - TODO: Packaging
+# - TODO: Delete recipe from details dialog
 
 if __name__ == "__main__":
     app = QApplication([])

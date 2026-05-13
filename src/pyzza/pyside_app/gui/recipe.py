@@ -102,7 +102,7 @@ class RecipeDialog(QDialog):
         buttons = self._make_layout()
         self._fill_in()
         self._set_signals(buttons)
-        self._set_editable(False)
+        self.set_editable(False)
 
         self._adjust_decorations_heights()
 
@@ -227,7 +227,7 @@ class RecipeDialog(QDialog):
                         i.name = self.recipe.title
 
         self._fill_in()
-        self._set_editable(False)
+        self.set_editable(False)
 
         self.edit_validated.emit(self.recipe)
 
@@ -289,7 +289,7 @@ class RecipeDialog(QDialog):
     def _set_signals(self, buttons):
         self.editors[Recipe.N_PORTIONS].valueChanged.connect(self._portions_changed)
         b_delete, b_edit, b_validate, b_quit = buttons
-        b_edit.clicked.connect(lambda: self._set_editable(True))
+        b_edit.clicked.connect(lambda: self.set_editable(True))
         b_validate.clicked.connect(self._validate)
         b_quit.clicked.connect(self.accept)
 
@@ -334,7 +334,7 @@ class RecipeDialog(QDialog):
                 if isinstance(e := self.ingredients_list.item(i), DecorationItem):
                     e.maybe_adjust_height(i)
 
-    def _set_editable(self, editable):
+    def set_editable(self, editable):
         self.editable = editable
         if editable:  # Ensure that viewing different portions does not change the default
             self.editors[Recipe.N_PORTIONS].setValue(self.recipe.n_portions)

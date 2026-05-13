@@ -1,14 +1,15 @@
 from pathlib import Path
 
 import qtawesome as qta
-from PySide6.QtCore import QModelIndex
+from PySide6.QtCore import QModelIndex, QTimer
 from PySide6.QtGui import QAction, Qt
 from PySide6.QtWidgets import QMainWindow, QSplitter, QTableView, \
-    QFileDialog, QHeaderView, QMessageBox
+    QFileDialog, QHeaderView, QMessageBox, QWidget, QStackedLayout
 
 from models.recipe import RecipeBook, Recipe
 from pyside_app.gui.about import AboutDialog
 from pyside_app.gui.filters import FilterView
+from pyside_app.gui.festive_overlay import FestiveOverlay
 from pyside_app.gui.recipe import RecipeDialog
 from pyside_app.gui.sync import SyncDialog
 from pyside_app.models.recipes import RecipesModel, RecipesProxyModel
@@ -21,6 +22,8 @@ class MainWindow(QMainWindow):
         self.book = RecipeBook()
         self.edited = False
         self.path = None
+
+        self.overlay = FestiveOverlay(self)
 
         self.splitter = QSplitter()
 
@@ -37,6 +40,9 @@ class MainWindow(QMainWindow):
         if last := Settings.LAST_FILE.get():
             self.load(last)
         self.restore_settings()
+
+        if Settings.STARTUP_ANIMATION.get(True):
+            QTimer.singleShot(100, self.overlay.trigger)
 
     def _make_menu(self):
         menu = self.menuBar()
@@ -67,8 +73,8 @@ class MainWindow(QMainWindow):
         # --
         recipe_menu = menu.addMenu("&Recipes")
 
-        add_recipe = action(recipe_menu, "Add", "fa5s.plus", shortcut="Ctrl+N", fn=self.add_recipe)
-        del_recipe = action(recipe_menu, "Del", "fa5s.minus", shortcut="Delete", fn=self.del_recipe)
+        action(recipe_menu, "Add", "fa5s.plus", shortcut="Ctrl+N", fn=self.add_recipe)
+        action(recipe_menu, "Del", "fa5s.minus", shortcut="Delete", fn=self.del_recipe)
 
         # --
         filters_menu = menu.addMenu("&Filters")
@@ -90,17 +96,24 @@ class MainWindow(QMainWindow):
         # --
         misc_menu = menu.addMenu("&Misc")
 
-        sync = action(misc_menu, "Sync", "fa5s.sync", fn=lambda: SyncDialog().exec())
-
-        about = action(misc_menu, "About", "fa5s.info-circle", fn=lambda: AboutDialog().exec())
+        action(misc_menu, "Sync", "fa5s.sync", fn=lambda: SyncDialog().exec())
+        action(misc_menu, "About", "fa5s.info-circle", fn=lambda: AboutDialog().exec())
+        action(misc_menu, "Animation", "mdi.animation-play",
+               fn=self.overlay.trigger, shortcut="Home")
 
     def _make_layout(self):
+        holder = QWidget()
+        holder.setLayout(layout := QStackedLayout())
+        layout.addWidget(self.overlay)
+        layout.addWidget(self.splitter)
+        layout.setStackingMode(QStackedLayout.StackingMode.StackAll)
+
         self.splitter.addWidget(self.table)
         self.splitter.addWidget(self.filters)
         self.splitter.setCollapsible(0, False)
         self.splitter.setStretchFactor(0, 1)
         self.splitter.setStretchFactor(1, 0)
-        self.setCentralWidget(self.splitter)
+        self.setCentralWidget(holder)
 
     def _make_signals(self):
         self.filters.filter_changed.connect(self.on_filter_changed)
@@ -124,23 +137,11 @@ class MainWindow(QMainWindow):
 
         self.table.sortByColumn(-1, Qt.SortOrder.AscendingOrder)
 
-    def add_recipe(self):
-        row = len(self.book)
-        recipe = self.proxy_model.sourceModel().addRecipe()
-        self._on_recipe_edited(recipe)
-
-    def del_recipe(self):
-        indices = self.table.selectionModel().selectedRows()
-        model = self.proxy_model.sourceModel()
-        for proxy_index in sorted(indices, reverse=True):
-            source_index = self.proxy_model.mapToSource(proxy_index)
-            model.removeRow(source_index.row())
-
     def save(self, path: Path | str = None, request_file=False):
         path = path or self.path
         if request_file or path is None:
             path, _ = QFileDialog.getSaveFileName(
-                self, "Enter savefile name", Settings.LAST_FILE.get(),
+                self, "Enter savefile name", str(Settings.LAST_FILE.get()),
                 "Cookbook (*.rbk)"
             )
             if not path:
@@ -177,11 +178,40 @@ class MainWindow(QMainWindow):
         self.load(path)
         Settings.LAST_FILE.set(path)
 
+    def add_recipe(self):
+        new_recipe = self.book.default_recipe()
+        self.book.recipes[new_recipe.title] = new_recipe
+        rd = RecipeDialog(self, self.book, new_recipe.title)
+        rd.rejected.connect(lambda: self.book.recipes.pop(new_recipe.title))
+        rd.edit_validated.connect(self._on_recipe_added)
+
+        rd.edited = True
+        rd.set_editable(True)
+
+        rd.show()
+
+    def del_recipe(self):
+        indices = self.table.selectionModel().selectedRows()
+        assert len(indices) == 1
+        model: RecipesModel = self.proxy_model.sourceModel()
+        source_index = self.proxy_model.mapToSource(indices[0])
+        recipe = self.book.recipes.pop(source_index.siblingAtColumn(model.columnCount()-1).data())
+        model.recipe_deleted(source_index.row())
+
+        self.edited = True
+        self._update_title()
+
     def on_recipe_clicked(self, index):
         item = self.proxy_model.recipe_title(index)
         rd = RecipeDialog(self, self.book, item)
         rd.edit_validated.connect(self._on_recipe_edited)
         rd.show()
+
+    def _on_recipe_added(self, recipe: Recipe):
+        model: RecipesModel = self.proxy_model.sourceModel()
+        model.recipe_added(recipe)
+        self.edited = True
+        self._update_title()
 
     def _on_recipe_edited(self, recipe: Recipe):
         model: RecipesModel = self.proxy_model.sourceModel()

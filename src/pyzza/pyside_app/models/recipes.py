@@ -3,7 +3,7 @@ from enum import StrEnum
 from typing import Dict
 
 from PySide6 import QtCore
-from PySide6.QtCore import Qt, QSize, QSortFilterProxyModel, QModelIndex
+from PySide6.QtCore import Qt, QSize, QSortFilterProxyModel, QModelIndex, QPersistentModelIndex
 from PySide6.QtGui import QIcon
 
 from models.recipe import Recipe, RecipeBook, DishType, Regimen, Duration
@@ -13,10 +13,20 @@ from pyside_app.gui.icons import Icons
 class RecipesModel(QtCore.QAbstractTableModel):
     def __init__(self, book: RecipeBook):
         super().__init__()
-        self._data = list(book.recipes.values())
+        self._data = book.recipes
+
+    def _index(self): return list(self._data.keys())
+
+    def recipe(self, i: int | QModelIndex | QPersistentModelIndex):
+        if not isinstance(i, int):
+            i = i.row()
+        return self._data[self._index()[i]]
+
+    def row(self, recipe: Recipe):
+        return self._index().index(recipe.title)
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
-        def get(): return RecipeTupleView.data(self._data[index.row()], index.column())
+        def get(): return RecipeTupleView.data(self.recipe(index), index.column())
         if role == Qt.ItemDataRole.DisplayRole and isinstance(r := get(), str):
             return r
         elif role == Qt.ItemDataRole.DecorationRole and isinstance(r := get(), QIcon):
@@ -24,7 +34,7 @@ class RecipesModel(QtCore.QAbstractTableModel):
         elif role == Qt.ItemDataRole.SizeHintRole:
             return RecipeTupleView.column_size(index.column())
         elif role == Qt.ItemDataRole.UserRole:
-            return RecipeTupleView.sort_key(self._data[index.row()], index.column())
+            return RecipeTupleView.sort_key(self.recipe(index), index.column())
 
         return None
 
@@ -43,30 +53,20 @@ class RecipesModel(QtCore.QAbstractTableModel):
     def columnCount(self, index=QtCore.QModelIndex()):
         return RecipeTupleView.columns()
 
-    def recipe(self, index: int) -> Recipe:
-        return self._data[index]
+    def recipe_changed(self, recipe: Recipe):
+        row = self.row(recipe)
+        self.dataChanged.emit(self.index(row, 0), self.index(row, self.columnCount()-1))
 
-    def add_recipe(self):
-        row = self.rowCount()
+    def recipe_added(self, recipe: Recipe):
+        row = self.rowCount()-1
         self.beginInsertRows(QModelIndex(), row, row)
-        recipe = Recipe(
-            title="Poudre de pinrlinpinpin",
-            basic=False,
-            type=DishType.SALTY,
-            regimen=Regimen.MEAT,
-            duration=Duration.SHORT,
-            n_portions=0,
-            t_portions="",
-            ingredients=[],
-            steps=[],
-            notes=""
-        )
-        self._data.append(recipe)
+        self.insertRow(row, QModelIndex())
         self.endInsertRows()
 
-    def recipe_changed(self, recipe: Recipe):
-        row = self._data.index(recipe)
-        self.dataChanged.emit(self.index(row, 0), self.index(row, self.columnCount()-1))
+    def recipe_deleted(self, row: int):
+        self.beginRemoveRows(QModelIndex(), row, row)
+        self.removeRow(row)
+        self.endRemoveRows()
 
 
 class RecipesProxyModel(QSortFilterProxyModel):

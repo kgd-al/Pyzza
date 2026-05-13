@@ -33,7 +33,8 @@ desktop = [
     "qtawesome"
 ]
 android = [
-  "flet", "flet-datatable2",
+    "flet", "flet-datatable2",
+    "cmake"
 ]
 dev = [
     "flet[all]",
