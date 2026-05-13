@@ -5,7 +5,7 @@ from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QAbstractItemView, QListWidget, \
     QAbstractItemDelegate
 
-from pyside_app.gui.misc import fa_button
+from .misc import fa_button
 
 
 class ListControls(QWidget):

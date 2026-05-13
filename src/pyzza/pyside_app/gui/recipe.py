@@ -2,17 +2,17 @@ from enum import StrEnum
 
 import qtawesome as qta
 from PySide6.QtCore import QSize, Signal, QSignalBlocker
-from PySide6.QtGui import Qt, QFontMetrics, QKeySequence
+from PySide6.QtGui import Qt, QFontMetrics
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QDoubleSpinBox, QTextEdit, \
-    QListWidget, QListWidgetItem, QPushButton, QAbstractScrollArea, QCheckBox, QLineEdit, QSlider, QMessageBox
+    QListWidget, QListWidgetItem, QPushButton, QAbstractScrollArea, QCheckBox, QLineEdit, QMessageBox
 
-from models.recipe import IngredientsListEntry, DecorationEntry, IngredientEntry, SubrecipeEntry, Recipe, \
+from .delegates import IngredientsListDelegate, StepsListDelegate
+from .icons import Icons
+from .list_controls import ListControls
+from .misc import line, EnumComboBox, fa_button, set_icon
+from ..settings import Settings
+from ...models.recipe import IngredientsListEntry, DecorationEntry, IngredientEntry, SubrecipeEntry, Recipe, \
     RecipeBook
-from pyside_app.gui.delegates import IngredientsListDelegate, StepsListDelegate
-from pyside_app.gui.icons import Icons
-from pyside_app.gui.list_controls import ListControls
-from pyside_app.gui.misc import line, EnumComboBox, fa_button, set_icon
-from pyside_app.settings import Settings
 
 
 def set_header_font(widget):

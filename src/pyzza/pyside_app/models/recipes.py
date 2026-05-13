@@ -1,13 +1,11 @@
-from dataclasses import fields
 from enum import StrEnum
-from typing import Dict
 
 from PySide6 import QtCore
 from PySide6.QtCore import Qt, QSize, QSortFilterProxyModel, QModelIndex, QPersistentModelIndex
 from PySide6.QtGui import QIcon
 
-from models.recipe import Recipe, RecipeBook, DishType, Regimen, Duration
-from pyside_app.gui.icons import Icons
+from ..gui.icons import Icons
+from ...models.recipe import Recipe, RecipeBook
 
 
 class RecipesModel(QtCore.QAbstractTableModel):

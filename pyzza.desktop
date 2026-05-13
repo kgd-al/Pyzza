@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Exec=/usr/local/bin/pyzza %u
+Icon=/usr/share/icons/hicolor/512x512/apps/pyzza.png
+Terminal=false
+Name=Pyzza Cookbook
+GenericName=Python-powered CookBook
+Comment=Pyzza is for pizzas and more
+Categories=Qt;KDE;X-Malenda;Utility

@@ -1,11 +1,10 @@
 import asyncio
 import socket
 import threading
-import urllib
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.request import urlopen
 
-from zeroconf import Zeroconf, ServiceInfo, ServiceListener
+from zeroconf import Zeroconf, ServiceInfo
 from zeroconf.asyncio import AsyncZeroconf, AsyncServiceBrowser
 
 PORT = 8765

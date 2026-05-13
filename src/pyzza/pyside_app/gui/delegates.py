@@ -2,8 +2,8 @@ from PySide6.QtCore import QEvent, Qt
 from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import QTextEdit, QAbstractItemDelegate, QStyledItemDelegate, QDialog
 
-from models.recipe import RecipeBook
-from pyside_app.gui.ingredients_list_entry_dialog import IngredientsListEntryDialog
+from .ingredients_list_entry_dialog import IngredientsListEntryDialog
+from ...models.recipe import RecipeBook
 
 
 class StepsListDelegate(QStyledItemDelegate):

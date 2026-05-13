@@ -4,8 +4,8 @@ import re
 from PySide6.QtCore import Qt, Signal, QSignalBlocker
 from PySide6.QtWidgets import QWidget, QLineEdit, QLabel, QCheckBox, QGridLayout, QListWidget
 
-from models.recipe import DishType, Regimen, Duration, Recipe
-from pyside_app.gui.misc import line, YesNoGroupBox, EnumComboBox
+from .misc import line, YesNoGroupBox, EnumComboBox
+from ...models.recipe import DishType, Regimen, Duration, Recipe
 
 
 class FilterView(QWidget):

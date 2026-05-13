@@ -6,14 +6,14 @@ from PySide6.QtGui import QAction, Qt
 from PySide6.QtWidgets import QMainWindow, QSplitter, QTableView, \
     QFileDialog, QHeaderView, QMessageBox, QWidget, QStackedLayout
 
-from models.recipe import RecipeBook, Recipe
-from pyside_app.gui.about import AboutDialog
-from pyside_app.gui.filters import FilterView
-from pyside_app.gui.festive_overlay import FestiveOverlay
-from pyside_app.gui.recipe import RecipeDialog
-from pyside_app.gui.sync import SyncDialog
-from pyside_app.models.recipes import RecipesModel, RecipesProxyModel
-from pyside_app.settings import Settings
+from .about import AboutDialog
+from .festive_overlay import FestiveOverlay
+from .filters import FilterView
+from .recipe import RecipeDialog
+from .sync import SyncDialog
+from ..models.recipes import RecipesModel, RecipesProxyModel
+from ..settings import Settings
+from ...models.recipe import RecipeBook, Recipe
 
 
 class MainWindow(QMainWindow):

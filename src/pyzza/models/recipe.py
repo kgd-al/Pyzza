@@ -1,7 +1,7 @@
 import dataclasses
 from dataclasses import Field
 from enum import StrEnum, auto
-from typing import List, ClassVar, Dict, Iterable, Set, TYPE_CHECKING
+from typing import List, ClassVar, Dict, Set, TYPE_CHECKING
 
 import yaml
 
@@ -9,8 +9,8 @@ import yaml
 def named_fields():
     """
      This generates a named accessor for every field in the dataclass.
-     Note: this is not enough for the IDE to pick up on it so you need to also
-     generate stubs (see generate_stubs in pyzza.pyside_app)
+     Note: this is not enough for the IDE to pick up on it so you need to
+     manually define the field as well
      """
     def decorator(klass):
         for f in dataclasses.fields(klass):
@@ -127,6 +127,7 @@ class Recipe(yaml.YAMLObject):
         DURATION: Field = None
         N_PORTIONS: Field = None
         T_PORTIONS: Field = None
+
 
 RecipesDict = Dict[str, Recipe]
 

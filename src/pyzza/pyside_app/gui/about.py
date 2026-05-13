@@ -1,10 +1,8 @@
-import ast
+from PySide6.QtWidgets import QLabel, QDialog, QVBoxLayout, QCheckBox
 
-from PySide6.QtWidgets import QGridLayout, QLabel, QDialog, QVBoxLayout, QCheckBox
-
-from pyside_app.gui.icons import Icons
-from pyside_app.gui.misc import icon_label
-from pyside_app.settings import Settings
+from .icons import Icons
+from .misc import icon_label
+from ..settings import Settings
 
 
 class AboutDialog(QDialog):

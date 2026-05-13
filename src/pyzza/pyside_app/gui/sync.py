@@ -5,8 +5,8 @@ from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QTextEdit, QToolButton, QHBoxLayout, \
     QLineEdit, QPushButton, QFileDialog
 
-from pyside_app.settings import Settings
-from pyzza.networking.sync_server import SyncServer
+from ..settings import Settings
+from ...networking.sync_server import SyncServer
 
 
 class SyncDialog(QDialog):

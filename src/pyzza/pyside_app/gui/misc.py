@@ -8,7 +8,7 @@ from PySide6.QtWidgets import QFrame, QToolButton
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QRadioButton, QButtonGroup, QComboBox, \
     QSizePolicy
 
-from pyside_app.gui.icons import Icons
+from .icons import Icons
 
 
 def line():

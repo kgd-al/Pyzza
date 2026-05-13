@@ -1,13 +1,12 @@
 import math
-from typing import List
 
+import qtawesome as qta
 from PySide6.QtCore import QTimer
 from PySide6.QtGui import QCursor, Qt
-from PySide6.QtWidgets import QDialog, QWidget, QTabWidget, QLayout, QVBoxLayout, QDialogButtonBox, QHBoxLayout, QLabel, \
-    QLineEdit, QComboBox, QCompleter, QDoubleSpinBox
+from PySide6.QtWidgets import QDialog, QWidget, QTabWidget, QVBoxLayout, QDialogButtonBox, QHBoxLayout, QLineEdit, \
+    QComboBox, QCompleter, QDoubleSpinBox
 
-from models.recipe import DecorationEntry, IngredientsListEntry, SubrecipeEntry, IngredientEntry, RecipeBook
-import qtawesome as qta
+from ...models.recipe import DecorationEntry, IngredientsListEntry, SubrecipeEntry, IngredientEntry, RecipeBook
 
 
 def editable_combobox(items, allow_inserts):

@@ -1,0 +1,2 @@
+gtk-update-icon-cache /usr/share/icons/hicolor
+update-desktop-database /usr/share/applications

@@ -1,10 +1,10 @@
 import math
 import random
 
-from PySide6.QtCore import Qt, QRect, QRectF, QPointF, QTimer, QPropertyAnimation, QEasingCurve, Signal, \
-    QParallelAnimationGroup, QSequentialAnimationGroup
-from PySide6.QtGui import QColor, QColorConstants, QPainter, QPainterPath, QVector2D
-from PySide6.QtWidgets import QWidget, QGraphicsScene, QGraphicsView, QGraphicsRectItem, QGraphicsItem, QGraphicsObject
+from PySide6.QtCore import Qt, QRectF, QPointF, QTimer, QPropertyAnimation, QEasingCurve, Signal, \
+    QParallelAnimationGroup
+from PySide6.QtGui import QColor, QPainter, QPainterPath, QVector2D
+from PySide6.QtWidgets import QGraphicsScene, QGraphicsView, QGraphicsObject
 
 N = 40
 
