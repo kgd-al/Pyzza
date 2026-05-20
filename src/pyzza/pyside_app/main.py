@@ -9,9 +9,7 @@ from pyzza.pyside_app.gui.main_window import MainWindow
 # TODOLIST:
 # - TODO: Handling search for ingredients and sub-recipes
 # - TODO: Pdf printing
-# - TODO: List parent recipes in sub-recipes?
-# - TODO: Festive overlay
-# - TODO: Packaging
+# - TODO: Better packaging
 # - TODO: Delete recipe from details dialog
 
 if __name__ == "__main__":

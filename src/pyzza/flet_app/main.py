@@ -1,9 +1,5 @@
 import asyncio
 
-print("APP STARTING")
-print("YOOOHOOO")
-print("08:26")
-
 import functools
 import os
 import urllib
@@ -55,11 +51,9 @@ class MainWindow:
 
         controls = ft.Row(
             controls=[self.sync_button, self.filter],
-            margin=ft.Margin(top=10),
         )
 
         self.debug_dialog = ft.AlertDialog(
-            title=ft.Text("debug"),
             content=ft.Container(
                 ft.TextField(read_only=True, multiline=True),
                 animate=ft.Animation(300, ft.AnimationCurve.EASE_IN_OUT),
@@ -67,14 +61,14 @@ class MainWindow:
             )
         )
 
-        self.view = ft.Column(
+        self.view = ft.SafeArea(ft.Column(
             expand=True,
             controls=[
                 controls,
                 self.sync_hint,
                 self.table,
             ],
-        )
+        ))
         self.page = page
 
         self.book = RecipeBook()
@@ -115,7 +109,7 @@ class MainWindow:
         self.sync_button.disabled = False
 
         book = RecipeBook.load(data)
-        self.debug_message(f"> {len(recipes)} recipes")
+        self.debug_message(f"> {len(book)} recipes")
         if book:
             CACHE.parent.mkdir(parents=True, exist_ok=True)
             book.write(stream=str(CACHE))
@@ -164,7 +158,7 @@ class MainWindow:
                     ft.DataCell(ft.Text(r.title), **callbacks),
                 ],
 
-            ) for r in self.book.recipes.values()
+            ) for r in sorted(self.book.recipes.values(), key=lambda r: r.title)
         ]
         self.page.update()
 
@@ -172,9 +166,20 @@ class MainWindow:
         if not isinstance(e.data, str):
             kgd_debug(f"Got something other than text in the filter: {e}")
             return
+
+        data = [s.strip() for s in e.data.lower().split(",")]
         for r in self.table.rows:
             if isinstance(content := r.cells[-1].content, ft.Text):
-                r.visible = (e.data.lower() in content.value.lower())
+                r.visible = True
+                for item in data:
+                    match = item in content.value.lower()
+                    if not match:
+                        for i in self.book.recipes[content.value].ingredients:
+                            if isinstance(i, IngredientEntry):
+                                match |= item in i.name.lower()
+                                if match:
+                                    break
+                    r.visible &= match
 
     async def show_recipe(self, e: ft.Event[ft.DataRow]):
         if not isinstance(row := e.control.parent, ft.DataRow):
@@ -323,6 +328,33 @@ def main(page: ft.Page):
         print("Initial route:", page.route)
         main_window = MainWindow(page)
 
+        wakelock = ft.Wakelock()
+
+        async def maybe_keep_awake(e: ft.Event[ft.IconButton]):
+            e.control.disabled = True
+            select = not e.control.selected
+            e.control.selected = select
+            e.control.update()
+
+            try:
+                if select:
+                    await wakelock.enable()
+                    page.show_dialog(ft.SnackBar(ft.Text("Staying awake")))
+                else:
+                    await wakelock.disable()
+            except RuntimeError:
+                e.control.selected = not select
+                page.show_dialog(ft.SnackBar(ft.Text(f"Failed to set sleepiness to {select}")))
+
+            e.control.disabled = False
+            e.control.update()
+
+        async def probably_not_keep_awake():
+            try:
+                await wakelock.disable()
+            except RuntimeError:
+                pass
+
         def route_change():
             if not page.views:
                 # Ensure at least top-level view
@@ -345,6 +377,19 @@ def main(page: ft.Page):
                                 ft.AppBar(
                                     title=ft.Text(recipe),
                                     automatically_imply_leading=True,  # back arrow
+                                    actions=[
+                                        ft.IconButton(
+                                            icon=ft.Icons.REMOVE_RED_EYE_OUTLINED,
+                                            selected_icon=ft.Icons.REMOVE_RED_EYE,
+                                            on_click=maybe_keep_awake,
+                                            selected=False,
+                                            style=ft.ButtonStyle(
+                                                color={
+                                                    ft.ControlState.SELECTED: ft.Colors.YELLOW,
+                                                }
+                                            ),
+                                        )
+                                    ]
                                 ),
                                 details_view(page, main_window.book.recipes[recipe]),
                             ]
@@ -354,6 +399,7 @@ def main(page: ft.Page):
             page.update()
 
         async def view_pop(e):
+            await probably_not_keep_awake()
             if e.view is not None:
                 page.views.remove(e.view)
                 top_view = page.views[-1]

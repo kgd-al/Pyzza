@@ -9,6 +9,8 @@ bid=studio.almann.pyzza
 
 flet build apk --verbose
 
+[ $# -eq 0 ] && exit 0
+
 printf "Removing previous version: "
 $adb uninstall $bid
 

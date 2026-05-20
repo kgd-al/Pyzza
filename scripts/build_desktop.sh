@@ -4,7 +4,7 @@ version=1.0rc0
 
 mkdir -p build/pyside
 export PYTHONPATH=src/pyzza/pyside_app:src
-#pyside6-deploy --config-file pysidedeploy.spec --keep-deployment-files
+pyside6-deploy --config-file pysidedeploy.spec --keep-deployment-files
 
 fpm -s dir -t deb \
     -n pyzza \
