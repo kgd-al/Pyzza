@@ -1,6 +1,9 @@
 import argparse
+import difflib
 import json
 from functools import lru_cache
+
+import yaml
 
 from ..models.recipe import Recipe, IngredientEntry, SubrecipeEntry, DecorationEntry, Regimen, DishType, Duration, \
     RecipeBook
@@ -94,7 +97,7 @@ def main():
             ingredients=convert_ingredients(recipe["ing"],
                                             recipes_names, ingredients_data, units_data),
             steps=recipe["steps"],
-            notes=recipe["notes"],
+            notes="\n".join(line for line in recipe["notes"].splitlines() if line.strip()),
 
         )
 
@@ -106,12 +109,17 @@ def main():
         rbk.write(stream=f)
 
     with open(args.dest, "r") as f:
-        recipes_roundtrip = load_recipes(f)
+        rbk_roundtrip = rbk.load(f)
 
-    for r_lhs, r_rhs in zip(recipes, recipes_roundtrip):
-        assert r_lhs == r_rhs, f"\n{r_lhs=}\n\n{r_rhs=}"
-    assert recipes_roundtrip == recipes
-    print(write_recipes(recipes))
+    def yaml_diff(a, b):
+        a_lines = yaml.dump(a, allow_unicode=True).splitlines(keepends=True)
+        b_lines = yaml.dump(b, allow_unicode=True).splitlines(keepends=True)
+        return "".join(difflib.Differ().compare(a_lines, b_lines))
+
+    for r_lhs, r_rhs in zip(rbk.recipes.values(), rbk_roundtrip.recipes.values()):
+        assert r_lhs == r_rhs, "\n" + yaml_diff(r_lhs, r_rhs) + f"\n{r_lhs}\n\n{r_rhs}\n"
+    assert rbk.recipes == rbk_roundtrip.recipes
+    print(rbk.write())
     print()
     print(f"Generated {args.dest} from {args.file} ({len(recipes)} recipes)")
 

@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Optional
 
 import qtawesome as qta
 from PySide6.QtCore import QModelIndex, QTimer
@@ -12,6 +13,7 @@ from .filters import FilterView
 from .recipe import RecipeDialog
 from .sync import SyncDialog
 from ..models.recipes import RecipesModel, RecipesProxyModel
+from ..models.to_pdf import print_to_pdf
 from ..settings import Settings
 from ...models.recipe import RecipeBook, Recipe
 
@@ -67,7 +69,7 @@ class MainWindow(QMainWindow):
         action(file_menu, "Load", "fa5s.folder-open", shortcut="Ctrl+O", fn=self.load_new_file)
         action(file_menu, "Save", "fa5s.save", shortcut="Ctrl+S", fn=self.save)
         action(file_menu, "Save as", "fa5s.save", shortcut="Ctrl+Shift+S", fn=self.save_as)
-        action(file_menu, "Print", "fa5s.print", shortcut="Ctrl+P")
+        action(file_menu, "Print", "fa5s.print", shortcut="Ctrl+P", fn=self.print_pdf)
         action(file_menu, "Quit", "fa5s.power-off", fn=self.close)
 
         # --
@@ -200,6 +202,21 @@ class MainWindow(QMainWindow):
 
         self.edited = True
         self._update_title()
+
+    def print_pdf(self, path: Optional[Path | str] = None):
+        if path is None:
+            path, _ = QFileDialog.getSaveFileName(
+                self, "Save to PDF",
+                dir=str(Settings.LAST_FILE.get().with_suffix(".pdf")),
+                filter="Portable Document Format (*.pdf)",
+                # options=QFileDialog.Option.DontUseNativeDialog
+            )
+
+        path = Path(path)
+        if path is None:
+            return
+
+        print_to_pdf(self.book, path)
 
     def on_recipe_clicked(self, index):
         item = self.proxy_model.recipe_title(index)

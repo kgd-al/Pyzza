@@ -30,7 +30,8 @@ dependencies = [
 [project.optional-dependencies]
 desktop = [
     "PySide6",
-    "qtawesome"
+    "qtawesome",
+    "reportlab"
 ]
 android = [
     "flet", "flet-datatable2",

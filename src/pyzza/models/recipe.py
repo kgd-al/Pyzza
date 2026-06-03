@@ -1,4 +1,5 @@
 import dataclasses
+import unicodedata
 from dataclasses import Field
 from enum import StrEnum, auto
 from typing import List, ClassVar, Dict, Set, TYPE_CHECKING
@@ -101,7 +102,6 @@ class Recipe(yaml.YAMLObject):
     title: str
 
     basic: bool
-    # BASIC: dataclasses.Field
 
     type: DishType
     regimen: Regimen
@@ -111,13 +111,40 @@ class Recipe(yaml.YAMLObject):
     n_portions: float
     t_portions: str
 
-    #id
-
     ingredients: IngredientsList
     steps: List[str]
     notes: str
 
-    is_sub_recipe: bool = False
+    used_in: List[str] = dataclasses.field(default_factory=list, metadata={"serialize": False})
+
+    @property
+    def is_sub_recipe(self): return len(self.used_in) > 0
+
+    @property
+    def ascii_title(self): return self.to_ascii(self.title)
+
+    @staticmethod
+    def to_ascii(text):
+        normalized = unicodedata.normalize("NFKD", text)
+        return normalized.encode("ascii", "ignore").decode("ascii")
+
+    def __lt__(self, other: 'Recipe'):
+        return self.ascii_title < other.ascii_title
+
+    @classmethod
+    def to_yaml(cls, dumper, recipe):
+        data = {
+            f.name: getattr(recipe, f.name)
+            for f in dataclasses.fields(recipe)
+            if f.metadata.get("serialize", True)
+        }
+        return dumper.represent_mapping(cls.yaml_tag, data)
+
+    @classmethod
+    def from_yaml(cls, loader, node):
+        data = loader.construct_mapping(node, deep=True)
+        fields = {f.name for f in dataclasses.fields(cls)}
+        return cls(**{k: v for k, v in data.items() if k in fields})
 
     if TYPE_CHECKING:  # Just to make IDEs happy, actually filled by the decorator
         TITLE: Field = None
@@ -150,7 +177,7 @@ class RecipeBook:
                     self.units.add(i.unit)
 
                 elif isinstance(i, SubrecipeEntry):
-                    self.recipes[i.name].is_sub_recipe = True
+                    self.recipes[i.name].used_in.append(r.title)
 
             # print(r)
 

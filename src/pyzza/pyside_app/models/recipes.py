@@ -79,6 +79,15 @@ class RecipesProxyModel(QSortFilterProxyModel):
     def recipe_title(self, index):
         return self.data(self.index(index.row(), RecipeTupleView.title_column()))
 
+    def lessThan(self, left: QModelIndex, right: QModelIndex) -> bool:
+        if (left.column() == RecipeTupleView.title_column() and
+                right.column() == RecipeTupleView.title_column()):
+            lhs = self.sourceModel().recipe(left.row())
+            rhs = self.sourceModel().recipe(right.row())
+            return lhs.ascii_title < rhs.ascii_title
+
+        return super().lessThan(left, right)
+
 
 class RecipeTupleView:
     COLUMNS = [Recipe.BASIC, Recipe.TYPE, Recipe.REGIMEN, Recipe.DURATION, Recipe.TITLE]

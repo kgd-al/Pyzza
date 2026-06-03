@@ -6,4 +6,5 @@ __pycache__/
 
 .python-version
 *.rbk
+*.pdf
 *.egg-info
