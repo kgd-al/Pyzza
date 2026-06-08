@@ -1,16 +1,20 @@
-import unicodedata
 import re
+from enum import StrEnum
+from functools import lru_cache
+from io import BytesIO
+from pathlib import Path
+from typing import List
 
+from PySide6.QtCore import QBuffer, QIODevice
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, StyleSheet1, ParagraphStyle
 from reportlab.lib.units import cm
-from reportlab.platypus import Flowable, Spacer
+from reportlab.platypus import Flowable, Spacer, Image, Table, TableStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, HRFlowable, PageBreak
 from reportlab.platypus.tableofcontents import TableOfContents
 
-from pathlib import Path
-from typing import List
+from ..gui.icons import Icons
 from ...models.recipe import IngredientEntry, DecorationEntry, SubrecipeEntry
 from ...models.recipe import RecipeBook, Recipe
 
@@ -30,9 +34,7 @@ def print_to_pdf(book: RecipeBook, path: Path):
     items = []
 
     toc = TableOfContents()
-    toc.levelStyles = [
-        styles["link"]
-    ]
+    toc.levelStyles = [styles["link"]]
     items.extend([Paragraph(TOC_TITLE, styles["Title"]), toc, PageBreak()])
 
     for recipe in sorted(book.recipes.values()):
@@ -65,13 +67,18 @@ def _link_name(title: str) -> str:
     return "recipe_" + slug
 
 
-def _recipe(recipe: Recipe, styles: StyleSheet1) -> List[Flowable]:
-    items: List[Flowable] = [
-        Paragraph(f'{recipe.title}', styles['Title']),
-        HRFlowable(width="100%", thickness=0.5, color=colors.lightgrey, spaceAfter=12),
-        # icons,
-    ]
+@lru_cache
+def _image(icon, width, height, **kwargs):
+    pixmap = icon.pixmap(64, 64)
+    buffer = QBuffer()
+    buffer.open(QIODevice.WriteOnly)
+    pixmap.save(buffer, "PNG")
+    data = bytes(buffer.data())
+    buffer.close()
+    return Image(BytesIO(data), width=width, height=height, **kwargs)
 
+
+def _recipe(recipe: Recipe, styles: StyleSheet1) -> List[Flowable]:
     def _spacer(): items.append(Spacer(width=0, height=25))
 
     def _header(text):
@@ -81,6 +88,23 @@ def _recipe(recipe: Recipe, styles: StyleSheet1) -> List[Flowable]:
     def _link(name):
         items.append(Paragraph(
             f'➤ <link href="#{_link_name(name)}">{name}</link>', styles['link']))
+
+    items: List[Flowable] = [
+        Paragraph(f'{recipe.title}', styles['Title']),
+        HRFlowable(width="100%", thickness=0.5, color=colors.lightgrey, spaceAfter=12),
+    ]
+
+    icons = [Icons.BASIC_RECIPE.image()] if recipe.basic else []
+    icons += [Icons.get_image(e) for e in [recipe.type, recipe.regimen, recipe.duration]]
+    t = Table([[_image(i, 1*cm, 1*cm) for i in icons]],
+              colWidths=[1*cm] * len(icons), hAlign="CENTER")
+    t.setStyle(TableStyle([
+        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("LEFTPADDING", (0, 0), (-1, -1), .25 * cm),
+        ("RIGHTPADDING", (0, 0), (-1, -1), .25 * cm),
+    ]))
+    items.append(t)
 
     _header("Ingredients")
     items.append(Paragraph(f"Pour {recipe.n_portions} {recipe.t_portions}"))

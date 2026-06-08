@@ -8,10 +8,8 @@ from pyzza.pyside_app.gui.main_window import MainWindow
 
 # TODOLIST:
 # - TODO: Handling search for ingredients and sub-recipes
-# - TODO: Pdf printing (icons)
 # - TODO: Better packaging
 # - TODO: Delete recipe from details dialog
-# - TODO: Stars rating
 # - TODO: Swap +- in android recipe viewer
 # - TODO: Update ingredients/units list on recipe update/add/del
 # - TODO: Update used_in on recipe update/add/dell
@@ -27,7 +25,7 @@ if __name__ == "__main__":
     w.show()
 
     w.print_pdf("test.pdf")
-    # QTimer.singleShot(100, w.close)
+    QTimer.singleShot(100, w.close)
 
     app.exec()
 
